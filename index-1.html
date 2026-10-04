@@ -1,0 +1,2576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Owlious</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Audiowide&family=Orbitron:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  button { outline: none; -webkit-user-select: none; user-select: none; }
+  button:focus, button:active { outline: none; }
+
+  html, body { height: 100%; }
+  body {
+    margin: 0; background: #000000; color: #ffffff; font-family: Arial, Helvetica, sans-serif;
+    display: flex; flex-direction: column; overflow: hidden;
+  }
+
+  nav {
+    display: flex; flex-direction: column; align-items: flex-start;
+    padding: 8px 12px 4px; background: #000000; border-bottom: 1px solid #ffffff;
+    position: relative; z-index: 12; /* stays above the pack panel/overlay below */
+  }
+
+  .app-name { font-family: 'Audiowide', sans-serif; font-size: 22px; font-weight: 400; letter-spacing: 1px; color: #ffffff; }
+
+  .nav-top { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; }
+  .menu-btn { background: none; border: none; color: #ffffff; cursor: pointer; padding: 2px; display: flex; }
+  .menu-btn svg { width: 22px; height: 22px; stroke: #ffffff; fill: none; stroke-width: 1.8; }
+
+  .side-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 19; }
+  .side-overlay.active { display: block; }
+  .side-menu {
+    position: fixed; top: 0; left: 0; bottom: 0; width: 210px; background: #000000;
+    border-right: 1px solid #ffffff; z-index: 20; padding: 20px 14px;
+    transform: translateX(-100%); transition: transform 0.2s ease;
+  }
+  .side-menu.active { transform: translateX(0); }
+  .side-menu-item {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    color: #ffffff; font-size: 14px; padding: 12px 4px; border-bottom: 1px solid #222222; cursor: pointer;
+  }
+  .side-menu-item:hover { opacity: 0.7; }
+  .side-menu-divider { height: 1px; background: #222222; margin: 10px 4px; }
+  .side-menu-social { display: flex; gap: 10px; padding: 6px 4px 4px; }
+  .side-social-btn {
+    width: 36px; height: 36px; border: 1px solid #ffffff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; color: #ffffff;
+  }
+  .side-social-btn svg { width: 17px; height: 17px; stroke: #ffffff; fill: none; stroke-width: 1.8; }
+  .side-social-btn:hover { background: #ffffff; }
+  .side-social-btn:hover svg { stroke: #000000; }
+
+  .help-faq { display: flex; flex-direction: column; gap: 4px; margin-bottom: 24px; }
+  .help-q { font-weight: bold; font-size: 13px; margin-top: 14px; }
+  .help-a { font-size: 12px; color: #bbbbbb; line-height: 1.5; }
+  .help-contact { font-size: 13px; border-top: 1px solid #222222; padding-top: 16px; }
+  .help-contact a { color: #ffffff; }
+  .help-contact-note { display: block; font-size: 11px; color: #666666; margin-top: 4px; }
+
+  .nav-links { display: flex; align-items: center; width: 100%; justify-content: space-evenly; }
+
+  .nav-btn {
+    background: none; border: none; color: #ffffff; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; cursor: pointer;
+    padding: 5px 10px; border-radius: 0; transition: opacity 0.2s ease; position: relative; opacity: 0.75;
+  }
+
+  .nav-btn svg { width: 19px; height: 19px; stroke: #ffffff; fill: none; stroke-width: 1.8; }
+  .nav-btn:hover { opacity: 1; }
+  .nav-btn.active { opacity: 1; }
+  .nav-btn.active::after {
+    content: ''; position: absolute; bottom: -5px; left: 50%; transform: translateX(-50%);
+    width: 100%; height: 2px; background: #ffffff; border-radius: 2px 2px 0 0;
+  }
+
+  nav { flex: 0 0 auto; }
+  main {
+    padding: 30px; max-width: 700px; margin: 0 auto; width: 100%; box-sizing: border-box;
+    flex: 1 1 auto; overflow-y: auto; overflow-x: hidden; min-height: 0;
+  }
+  .page { display: none; }
+  .page.active { display: block; }
+  /* Only the AI page needs a different shape: it fills main exactly and scrolls
+     nowhere itself — only .chat-messages inside it scrolls, so the input box and
+     the rest of the app stay put while you read a long conversation. */
+  main:has(#ai.page.active), main.ai-active { overflow: hidden; padding-bottom: 0; }
+  #ai.page.active { display: flex; flex-direction: column; height: 100%; }
+
+  .top-row { display: flex; gap: 10px; margin-bottom: 24px; }
+
+  .explore-heading {
+    font-family: 'Audiowide', sans-serif; font-size: 17px; letter-spacing: 0.5px;
+    color: #ffffff; margin: 4px 0 14px;
+  }
+
+  .search-bar {
+    flex: 1; display: flex; align-items: center; gap: 8px;
+    border: 2px solid #ffffff; border-radius: 8px; padding: 8px 12px;
+  }
+
+  .search-bar svg { width: 18px; height: 18px; stroke: #ffffff; fill: none; stroke-width: 2; flex-shrink: 0; }
+  .search-bar input { background: none; border: none; outline: none; color: #ffffff; font-size: 14px; width: 100%; }
+  .search-bar input::placeholder { color: #999999; }
+
+  .recent-heading { font-size: 15px; font-weight: bold; margin: 4px 0 10px; color: #ffffff; }
+
+  .filter-chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 4px; }
+  .filter-chip {
+    flex: 0 0 auto; background: none; border: 1px solid #ffffff; color: #ffffff;
+    border-radius: 14px; padding: 5px 13px; font-size: 11px; cursor: pointer; white-space: nowrap;
+  }
+  .filter-chip.active { background: #ffffff; color: #000000; }
+
+  /* --- AI chat page --- */
+  .chat-wrap { display: flex; flex-direction: column; height: 100%; min-height: 0; position: relative; }
+
+  .chat-scrolldown-btn {
+    position: absolute; right: 10px; bottom: 74px; width: 34px; height: 34px; border-radius: 50%;
+    background: #ffffff; border: none; display: none; align-items: center; justify-content: center;
+    cursor: pointer; box-shadow: 0 2px 10px rgba(0,0,0,0.6); z-index: 5;
+  }
+  .chat-scrolldown-btn.show { display: flex; }
+  .chat-scrolldown-btn svg { width: 16px; height: 16px; stroke: #000000; fill: none; stroke-width: 2; }
+
+  .chat-attach-wrap { position: relative; }
+
+  .chat-model-menu {
+    position: absolute; bottom: calc(100% + 8px); top: auto; left: 0; width: 220px; background: #0a0a0a;
+    border: 1px solid #ffffff; border-radius: 10px; padding: 6px; z-index: 30;
+    display: flex; flex-direction: column; gap: 2px;
+    opacity: 0; transform: translateY(6px) scale(0.96); pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+  .chat-model-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+  .chat-model-item {
+    background: none; border: none; color: #ffffff; text-align: left; font-size: 12px;
+    padding: 9px 10px; border-radius: 6px; cursor: pointer;
+  }
+  .chat-model-item:hover { background: #1a1a1a; }
+  .chat-model-item.active { background: #ffffff; color: #000000; }
+
+  .chat-messages {
+    flex: 1; min-height: 0; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;
+    gap: 10px; padding: 4px 2px 12px;
+    scrollbar-width: none; -ms-overflow-style: none; /* Firefox / old Edge */
+  }
+  .chat-messages::-webkit-scrollbar { display: none; width: 0; height: 0; } /* Chrome / Safari / new Edge */
+
+  .chat-msg {
+    max-width: 87%; padding: 10px 13px; border-radius: 14px; font-size: 13px; line-height: 1.45;
+    word-wrap: break-word; overflow-wrap: anywhere; white-space: pre-wrap;
+  }
+  .chat-msg.user { align-self: flex-end; background: #ffffff; color: #000000; border-bottom-right-radius: 3px; }
+  .chat-msg.ai { align-self: flex-start; background: #111111; border: 1px solid #333333; color: #ffffff; border-bottom-left-radius: 3px; }
+  .chat-msg .msg-file { display: block; margin-top: 6px; font-size: 11px; opacity: 0.7; }
+  .chat-msg img.msg-thumb { max-width: 100%; border-radius: 8px; margin-top: 6px; display: block; }
+  .chat-msg audio.msg-audio { width: 100%; margin-top: 6px; display: block; }
+
+  .chat-msg .msg-text { white-space: pre-wrap; }
+  .msg-actions { display: flex; gap: 2px; margin-top: 8px; margin-left: -4px; }
+  .msg-action-btn { background: none; border: none; padding: 4px 6px; border-radius: 6px; cursor: pointer; display: flex; }
+  .msg-action-btn svg { width: 15px; height: 15px; stroke: #888888; fill: none; stroke-width: 1.8; }
+  .msg-action-btn:hover svg { stroke: #ffffff; }
+  .msg-dots-btn svg circle { fill: #888888; stroke: none; }
+  .msg-dots-btn:hover svg circle { fill: #ffffff; }
+
+  .msg-status { font-size: 11px; color: #888888; margin-top: 8px; }
+  .msg-note { font-size: 11px; color: #ff9a9a; margin-top: 8px; }
+  .msg-time { font-size: 11px; color: #888888; align-self: center; margin-left: 6px; }
+
+  .msg-menu {
+    position: fixed; z-index: 40; width: 180px; background: #0a0a0a; border: 1px solid #ffffff;
+    border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 2px;
+    opacity: 0; transform: scale(0.96); pointer-events: none; transition: opacity 0.14s ease, transform 0.14s ease;
+  }
+  .msg-menu.open { opacity: 1; transform: scale(1); pointer-events: auto; }
+
+  .chat-attach-preview { display: flex; gap: 6px; overflow-x: auto; }
+  .chat-attach-chip {
+    flex: 0 0 auto; background: #111111; border: 1px solid #444444; border-radius: 8px;
+    padding: 4px 8px; font-size: 10px; color: #cccccc; display: flex; align-items: center; gap: 6px;
+  }
+  .chat-attach-chip button { background: none; border: none; color: #ff6666; cursor: pointer; font-size: 12px; padding: 0; display: flex; }
+  .chat-attach-chip .chat-model-item-icon { stroke: #cccccc; }
+  .chat-attach-chip button svg { width: 12px; height: 12px; stroke: #ff6666; fill: none; stroke-width: 2; }
+
+  .chat-input-box {
+    display: flex; flex-direction: column; border: 1px solid #ffffff; border-radius: 18px;
+    padding: 8px 8px 6px; margin-top: 6px;
+  }
+
+  .chat-textarea {
+    background: none; border: none; color: #ffffff; font-size: 13px; padding: 4px 6px 8px;
+    resize: none; max-height: 110px; overflow-y: auto; line-height: 1.35;
+    font-family: Arial, Helvetica, sans-serif;
+  }
+  .chat-textarea:focus { outline: none; }
+
+  .chat-toolbar { display: flex; align-items: center; justify-content: space-between; }
+
+  .chat-plus-btn {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 6px; background: none;
+    border: 1px solid #ffffff; color: #ffffff; border-radius: 16px; padding: 6px 11px 6px 8px; cursor: pointer;
+  }
+  .chat-plus-btn svg { width: 15px; height: 15px; stroke: #ffffff; fill: none; stroke-width: 2; }
+  .chat-model-pill { font-size: 11px; color: #cccccc; }
+
+  .chat-model-divider { height: 1px; background: #333333; margin: 4px 2px; }
+
+  .chat-model-item { display: flex; align-items: center; gap: 8px; }
+  .chat-model-item-icon { width: 14px; height: 14px; stroke: #ffffff; fill: none; stroke-width: 1.8; flex: 0 0 auto; }
+
+  .chat-right-btns { display: flex; align-items: center; gap: 6px; }
+
+  .chat-icon-btn {
+    flex: 0 0 auto; background: none; border: 1px solid #ffffff; color: #ffffff;
+    width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center;
+    justify-content: center; cursor: pointer;
+  }
+  .chat-icon-btn svg { width: 16px; height: 16px; stroke: #ffffff; fill: none; stroke-width: 1.8; }
+  .chat-icon-btn.recording { background: #ff3b3b; border-color: #ff3b3b; }
+
+  .chat-send-btn {
+    flex: 0 0 auto; background: #ffffff; border: none; width: 34px; height: 34px;
+    border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .chat-send-btn svg { width: 15px; height: 15px; stroke: #000000; fill: none; stroke-width: 2; }
+  .chat-send-btn:disabled { opacity: 0.4; cursor: default; }
+
+  .recent-scroll {
+    display: flex; gap: 12px; overflow-x: auto; padding-bottom: 10px; margin-bottom: 22px;
+    scrollbar-width: none;
+  }
+
+  .recent-scroll::-webkit-scrollbar { display: none; }
+
+  .recent-card { flex: 0 0 92px; cursor: pointer; position: relative; }
+  .fav-btn {
+    position: absolute; top: 5px; right: 5px; z-index: 2; width: 24px; height: 24px;
+    border-radius: 50%; background: rgba(0,0,0,0.65); border: 1px solid #ffffff;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+  }
+  .fav-btn svg { width: 12px; height: 12px; stroke: #ffffff; fill: none; stroke-width: 1.6; }
+  .fav-btn.active svg { fill: #ffffff; }
+
+  .recent-card img, .recent-card .thumb-blank {
+    width: 92px; height: 92px; object-fit: cover; border-radius: 8px;
+    border: 1px solid #ffffff; display: block; background: #111111;
+  }
+
+  .recent-card .recent-title {
+    font-size: 12px; margin-top: 6px; line-height: 1.3; color: #ffffff;
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+  }
+
+  .recent-card .recent-meta { font-size: 10px; color: #999999; margin-top: 3px; }
+
+  /* Pack cards: wider 16:9 thumbnail instead of the square 92x92 used by assets/sfx */
+  .recent-card.pack-card { flex: 0 0 164px; }
+  .recent-card.pack-card img, .recent-card.pack-card .thumb-blank {
+    width: 164px; height: 92px; object-fit: cover; border-radius: 8px;
+    border: 1px solid #ffffff; display: block; background: #111111;
+  }
+  .recent-card .pack-size-line { color: #777777; }
+
+  /* Pack detail panel (v2) */
+  /* Pack detail takes over the whole screen below the nav bar (not a centered
+     popup), so the Owlious brand, hamburger menu, Packs and AI buttons stay
+     visible and usable the whole time. "top" is set inline by JS to the
+     nav's real rendered height when a pack is opened. */
+  .pack-panel.pack-panel-v2 {
+    left: 0; right: 0; bottom: 0; top: 0; width: 100%; max-width: none; margin: 0;
+    max-height: none; border-radius: 0; border: none;
+    padding: 0; transform: none;
+  }
+  .pack-panel.pack-panel-v2.active { transform: none; }
+  .pack-panel-v2 { display: flex; flex-direction: column; }
+  .pack-cover-wrap { position: relative; flex: 0 0 auto; background: #111111; }
+  .pack-cover-img, .pack-cover-blank {
+    width: 100%; aspect-ratio: 16 / 9; object-fit: cover; display: block; background: #111111;
+  }
+  .pack-cover-blank {
+    display: none; align-items: center; justify-content: center;
+  }
+  .pack-cover-blank.show { display: flex; }
+  .pack-cover-blank::after {
+    content: ''; width: 36px; height: 36px; opacity: 0.35;
+    background: no-repeat center / contain url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23ffffff" stroke-width="1.5"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-4 4-3-3-5 5"/></svg>');
+  }
+  .pack-close-btn {
+    position: absolute; top: 10px; right: 10px; width: 30px; height: 30px; border-radius: 50%;
+    background: rgba(0,0,0,0.65); border: 1px solid #ffffff; color: #ffffff; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .pack-close-btn svg { width: 15px; height: 15px; stroke: #ffffff; fill: none; stroke-width: 2; }
+  .pack-close-btn:hover { background: #ffffff; }
+  .pack-close-btn:hover svg { stroke: #000000; }
+
+  .pack-panel-body { padding: 18px 20px 20px; }
+  .pack-panel-body h3 { margin: 0 0 10px; }
+
+  .pack-info-block { display: flex; flex-direction: column; gap: 3px; font-size: 12px; color: #bbbbbb; margin-bottom: 10px; }
+  .pack-info-block .pack-info-label { color: #777777; display: inline-block; width: 84px; font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; }
+
+  .pack-stats-row { display: flex; gap: 16px; font-size: 12px; color: #ffffff; margin-bottom: 14px; padding-bottom: 14px; border-bottom: 1px solid #222222; }
+  .pack-stats-row b { font-size: 15px; display: block; }
+  .pack-stats-row span { display: block; font-size: 10px; color: #999999; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+
+  .pack-action-row { display: flex; gap: 8px; }
+  .pack-action-btn {
+    flex: 1; background: none; border: 2px solid #ffffff; color: #ffffff; border-radius: 8px;
+    padding: 10px; cursor: pointer; font-weight: bold; font-size: 13px;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .pack-action-btn:hover { background: #ffffff; color: #000000; }
+  .pack-action-btn svg { stroke: currentColor; fill: none; stroke-width: 1.8; }
+  .pack-action-btn.primary { background: #ffffff; color: #000000; flex: 2; }
+  .pack-action-btn.primary:hover { background: #cccccc; }
+  .pack-share-wrap { position: relative; flex: 1; display: flex; }
+  .pack-share-menu {
+    position: absolute; top: calc(100% + 8px); right: 0; width: 180px; background: #0a0a0a;
+    border: 1px solid #ffffff; border-radius: 10px; padding: 6px; z-index: 30;
+    display: flex; flex-direction: column; gap: 2px;
+    opacity: 0; transform: translateY(-6px) scale(0.96); pointer-events: none;
+    transition: opacity 0.16s ease, transform 0.16s ease;
+  }
+  .pack-share-menu.open { opacity: 1; transform: translateY(0) scale(1); pointer-events: auto; }
+
+  .pack-downloads-note { font-size: 11px; color: #999999; margin-top: 8px; text-align: center; min-height: 14px; }
+
+  .pack-section { border-top: 1px solid #222222; padding-top: 14px; margin-top: 14px; }
+
+  .pack-tags { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pack-tag { border: 1px solid #ffffff; border-radius: 12px; padding: 3px 10px; font-size: 11px; color: #ffffff; }
+  .pack-video-link {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #ffffff;
+    border: 1px solid #ffffff; border-radius: 8px; padding: 6px 10px; text-decoration: none;
+  }
+  .pack-video-link svg { stroke: #ffffff; fill: none; stroke-width: 1.8; }
+  .pack-video-link:hover { background: #ffffff; color: #000000; }
+  .pack-video-link:hover svg { stroke: #000000; }
+  .pack-desc { font-size: 13px; color: #cccccc; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+
+  .pack-section-heading {
+    font-size: 11px; font-weight: bold; margin: 0 0 8px; color: #999999; text-transform: uppercase; letter-spacing: 0.05em;
+    display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  }
+  .pack-view-toggle { display: flex; gap: 6px; }
+  .pack-view-toggle button {
+    background: none; border: 1px solid #ffffff; color: #ffffff; border-radius: 6px;
+    padding: 4px 10px; font-size: 11px; cursor: pointer; text-transform: none; letter-spacing: normal;
+  }
+  .pack-view-toggle button.active { background: #ffffff; color: #000000; }
+  .pack-contents-list { display: flex; flex-direction: column; gap: 6px; }
+  .pack-content-group-label { font-size: 11px; color: #999999; margin: 10px 0 2px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .pack-content-group-label:first-child { margin-top: 0; }
+  .pack-content-row { display: flex; align-items: center; gap: 10px; border: 1px solid #2a2a2a; border-radius: 8px; padding: 6px 8px; }
+  .pack-content-row img, .pack-content-row .pack-content-icon {
+    width: 34px; height: 34px; border-radius: 6px; object-fit: cover; background: #111111;
+    border: 1px solid #333333; flex: 0 0 auto; display: flex; align-items: center; justify-content: center;
+  }
+  .pack-content-row .pack-content-icon svg { width: 16px; height: 16px; stroke: #999999; fill: none; stroke-width: 1.8; }
+  .pack-content-name { flex: 1; min-width: 0; }
+  .pack-content-name .n { font-size: 12px; display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .pack-content-name .t { font-size: 10px; color: #777777; text-transform: uppercase; letter-spacing: 0.03em; }
+  .pack-content-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+  .pack-xml-btn {
+    background: none; border: 1px solid #666666; color: #cccccc; border-radius: 6px;
+    padding: 3px 8px; font-size: 10px; cursor: pointer; flex: 0 0 auto; white-space: nowrap;
+  }
+  .pack-xml-btn:hover { border-color: #ffffff; color: #ffffff; }
+  .pack-xml-pre {
+    background: #0a0a0a; border: 1px solid #2a2a2a; border-radius: 8px; padding: 10px;
+    font-size: 11px; color: #9be89b; overflow-x: auto; white-space: pre; margin: 6px 0 0; display: none;
+  }
+  .pack-xml-pre.active { display: block; }
+  .pack-content-audio { display: none; width: 100%; margin-top: 6px; }
+  .pack-content-audio.active { display: block; }
+  .pack-content-audio audio { width: 100%; height: 32px; }
+
+  .img-lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.92); z-index: 25;
+    align-items: center; justify-content: center; padding: 24px;
+  }
+  .img-lightbox.active { display: flex; }
+  .img-lightbox img { max-width: 100%; max-height: 100%; border-radius: 6px; }
+
+  .empty-msg { color: #999999; font-size: 13px; text-align: center; padding: 30px 0; }
+  .discover-promo {
+    border: 1px dashed #ffffff; border-radius: 10px; padding: 18px; text-align: center;
+    color: #ffffff; font-size: 13px; cursor: pointer; margin-bottom: 4px;
+  }
+  .discover-promo:hover { background: #111111; }
+  .soon-box {
+    border: 1px dashed #444444; border-radius: 10px; padding: 40px 20px;
+    text-align: center; color: #999999; font-size: 13px;
+  }
+
+  .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 10; }
+  .overlay.active { display: block; }
+
+  .view-panel {
+    position: fixed; left: 0; right: 0; top: 50%; transform: translate(0, -50%) scale(0.9);
+    background: #000000; border: 2px solid #ffffff; border-radius: 12px; padding: 20px;
+    max-width: 600px; width: 90%; margin: 0 auto; z-index: 11; max-height: 85vh; overflow-y: auto;
+    opacity: 0; pointer-events: none; transition: 0.2s ease;
+  }
+
+  .view-panel.active { opacity: 1; pointer-events: auto; transform: translate(0, -50%) scale(1); }
+  .view-panel h3 { margin-top: 0; color: #ffffff; }
+
+  .view-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: #999999; margin-bottom: 12px; }
+
+  .close-btn {
+    margin-top: 14px; width: 100%; background: none; border: 2px solid #ffffff; color: #ffffff;
+    border-radius: 8px; padding: 8px; cursor: pointer; font-weight: bold;
+  }
+  .close-btn:hover { background: #ffffff; color: #000000; }
+  .close-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .close-btn:disabled:hover { background: none; color: #ffffff; }
+
+  .drop-zone {
+    border: 2px dashed #ffffff; border-radius: 8px; padding: 22px; text-align: center;
+    cursor: pointer; font-size: 12px; color: #999999; margin-bottom: 14px;
+  }
+  .drop-zone:hover { background: #111111; }
+
+  .preview-canvas, .preview-audio-box {
+    width: 100%; border: 1px solid #ffffff; border-radius: 6px; margin-bottom: 14px; background: #050505;
+  }
+  .preview-canvas { display: block; max-height: 260px; object-fit: contain; }
+  .preview-audio-box { padding: 16px; display: none; }
+  .preview-audio-box audio { width: 100%; }
+
+  .params-heading { font-size: 13px; font-weight: bold; margin: 4px 0 10px; color: #ffffff; }
+
+  .param-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 12px; }
+  .param-row .param-label { flex: 0 0 110px; color: #999999; }
+  .param-row input[type="range"] { flex: 1; accent-color: #ffffff; }
+  .param-row input[type="color"] { width: 40px; height: 26px; border: 1px solid #ffffff; border-radius: 4px; background: none; padding: 0; }
+  .param-row .param-value { flex: 0 0 46px; text-align: right; color: #ffffff; }
+
+  .rendering-note { font-size: 11px; color: #666666; margin-top: 10px; text-align: center; }
+
+  /* --- Per-param timeline / animation (image effects only) --- */
+  .anim-toggle {
+    flex: 0 0 auto; display: flex; align-items: center; gap: 4px;
+    font-size: 10px; color: #00ccff; cursor: pointer; white-space: nowrap;
+  }
+  .anim-toggle input { accent-color: #00ccff; }
+
+  .anim-config {
+    border: 1px solid #222222; border-radius: 8px; padding: 10px;
+    margin: 4px 0 14px; background: #050505;
+  }
+
+  .anim-row { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; font-size: 11px; }
+  .anim-row span { flex: 0 0 80px; color: #999999; }
+  .anim-row input[type="number"] {
+    flex: 1; background: #000000; color: #ffffff; border: 1px solid #333333;
+    border-radius: 5px; padding: 4px 6px; font-size: 12px; outline: none;
+  }
+
+  .envelope-box { width: 100%; height: 90px; touch-action: none; }
+  .envelope-line { stroke: #00ccff; stroke-width: 2; fill: none; }
+  .envelope-grid { stroke: #222222; stroke-width: 1; }
+  .envelope-handle { fill: #00ccff; stroke: #000000; stroke-width: 1; cursor: grab; }
+  .envelope-handle:active { cursor: grabbing; fill: #66e0ff; }
+
+  .timeline-box { margin: 4px 0 16px; }
+  .timeline-controls { display: flex; align-items: center; gap: 8px; }
+  .play-btn {
+    flex: 0 0 auto; background: none; border: 2px solid #00ccff; color: #00ccff;
+    border-radius: 6px; padding: 6px 12px; font-size: 12px; cursor: pointer;
+  }
+  .play-btn:hover { background: #00ccff; color: #000000; }
+  .timeline-controls input[type="range"] { flex: 1; accent-color: #00ccff; }
+  .timeline-time { flex: 0 0 46px; text-align: right; font-size: 11px; color: #999999; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="nav-top">
+    <button class="menu-btn" onclick="toggleSideMenu()" title="Menu">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+    </button>
+    <span class="app-name">Owlious</span>
+  </div>
+  <div class="nav-links">
+    <button class="nav-btn" data-page="all" onclick="showPage('all')" title="Packs">
+      <svg viewBox="0 0 24 24"><path d="M21 8l-9-5-9 5 9 5 9-5z"/><path d="M3 8v8l9 5 9-5V8"/></svg>
+    </button>
+    <button class="nav-btn" data-page="ai" onclick="showPage('ai')" title="AI">
+      <svg viewBox="0 0 24 24"><path d="M12 2l1.6 4.4L18 8l-4.4 1.6L12 14l-1.6-4.4L6 8l4.4-1.6L12 2z"/><path d="M19 15l0.8 2.2L22 18l-2.2 0.8L19 21l-0.8-2.2L16 18l2.2-0.8L19 15z"/></svg>
+    </button>
+  </div>
+</nav>
+
+<div class="msg-menu" id="msgMenu">
+  <button class="chat-model-item" id="msgMenuRetry" onclick="retryLastReply()">
+    <svg viewBox="0 0 24 24" class="chat-model-item-icon"><path d="M20 12a8 8 0 1 1-2.3-5.7"/><path d="M20 4v5h-5"/></svg>
+    Retry
+  </button>
+  <button class="chat-model-item" onclick="searchWebForBubble()">
+    <svg viewBox="0 0 24 24" class="chat-model-item-icon"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+    Search the web
+  </button>
+</div>
+
+<div class="side-overlay" id="sideOverlay" onclick="closeSideMenu()"></div>
+<div class="side-menu" id="sideMenu">
+  <button class="side-menu-item" onclick="goToPage('all')">Packs</button>
+  <button class="side-menu-item" onclick="goToPage('ai')">AI</button>
+  <div class="side-menu-divider"></div>
+  <button class="side-menu-item" onclick="goToPage('help')">Support &amp; Help</button>
+  <div class="side-menu-divider"></div>
+  <div class="side-menu-social">
+    <a class="side-social-btn" href="https://youtube.com/@owlious?si=BH7zOc9FHTiTg9P4" target="_blank" rel="noopener" title="YouTube">
+      <svg viewBox="0 0 24 24"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9l6 3-6 3V9z" fill="#000000" stroke="none"/></svg>
+    </a>
+    <a class="side-social-btn" href="https://tiktok.com/@owlious" target="_blank" rel="noopener" title="TikTok">
+      <svg viewBox="0 0 24 24"><path d="M14 3v10.5a3.5 3.5 0 1 1-3-3.46"/><path d="M14 3a5 5 0 0 0 5 5"/></svg>
+    </a>
+    <a class="side-social-btn" href="https://www.instagram.com/0wlious?stkn=MTBhY3lrdmhld2dpbA==" target="_blank" rel="noopener" title="Instagram">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.2" cy="6.8" r="1" fill="#000000" stroke="none"/></svg>
+    </a>
+  </div>
+</div>
+
+<main>
+
+  <section id="assets" class="page">
+    <div class="explore-heading">Explore Assets</div>
+    <div class="top-row">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" class="searchInput" data-category="assets" placeholder="Search assets..." oninput="renderCategory('assets')">
+      </div>
+    </div>
+    <div class="recent-heading">Trending</div>
+    <div class="recent-scroll" data-list="trending"></div>
+    <div class="filter-chips" data-filterrow="assets"></div>
+    <div class="recent-heading">Browse</div>
+    <div class="recent-scroll" data-list="assets"></div>
+  </section>
+
+  <section id="sfx" class="page">
+    <div class="explore-heading">Explore SFX</div>
+    <div class="top-row">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" class="searchInput" data-category="sfx" placeholder="Search SFX..." oninput="renderCategory('sfx')">
+      </div>
+    </div>
+    <div class="filter-chips" data-filterrow="sfx"></div>
+    <div class="recent-heading">Browse</div>
+    <div class="recent-scroll" data-list="sfx"></div>
+  </section>
+
+  <section id="help" class="page">
+    <div class="explore-heading">Support &amp; Help</div>
+    <div class="help-faq">
+      <div class="help-q">How do I use an effect or sound?</div>
+      <div class="help-a">Open it from Assets, SFX, or All, upload your own file, adjust the settings, and download the result. Nothing is uploaded anywhere else — it all runs in your browser.</div>
+      <div class="help-q">Is the AI chat always available?</div>
+      <div class="help-a">Pollinations works with no setup. Other models (OpenAI, etc.) need a backend key and aren't connected yet.</div>
+      <div class="help-q">Where is my chat history stored?</div>
+      <div class="help-a">Only in this browser, on this device. Clearing site data or switching devices starts a fresh conversation.</div>
+    </div>
+    <div class="help-contact">
+      Still stuck? <a href="mailto:support@owlious.app">support@owlious.app</a>
+      <span class="help-contact-note">(placeholder — swap in your real support address)</span>
+    </div>
+  </section>
+
+  <section id="all" class="page">
+    <div class="explore-heading">Explore Packs</div>
+    <div class="top-row">
+      <div class="search-bar">
+        <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input type="text" class="searchInput" data-category="all" placeholder="Search everything..." oninput="renderCategory('all')">
+      </div>
+    </div>
+    <div class="recent-heading">Browse</div>
+    <div class="recent-scroll" data-list="all"></div>
+
+    <div class="recent-heading">Favorites</div>
+    <div class="recent-scroll" data-discover="favorites"></div>
+    <div class="recent-heading">Best</div>
+    <div class="recent-scroll" data-discover="best"></div>
+    <div class="recent-heading">Trending</div>
+    <div class="recent-scroll" data-discover="trending2"></div>
+    <div class="recent-heading">Most Downloaded</div>
+    <div class="recent-scroll" data-discover="mostdl"></div>
+    <div class="recent-heading">New Arrivals</div>
+    <div class="recent-scroll" data-discover="new"></div>
+    <div class="recent-heading">Best Theme</div>
+    <div class="recent-scroll" data-discover="featured"></div>
+    <div class="recent-heading">Fantasy</div>
+    <div class="recent-scroll" data-discover="fantasy"></div>
+    <div class="recent-heading">Sci-Fi</div>
+    <div class="recent-scroll" data-discover="scifi"></div>
+    <div class="recent-heading">Cyberpunk</div>
+    <div class="recent-scroll" data-discover="cyberpunk"></div>
+    <div class="recent-heading">Classic</div>
+    <div class="recent-scroll" data-discover="classic"></div>
+  </section>
+
+  <section id="ai" class="page">
+    <div class="chat-wrap">
+      <div class="chat-messages" id="chatMessages"></div>
+      <button class="chat-scrolldown-btn" id="chatScrollDownBtn" onclick="scrollChatToBottom()" title="Scroll to latest">
+        <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+      </button>
+      <div class="chat-attach-preview" id="chatAttachPreview"></div>
+      <div class="chat-input-box">
+        <textarea class="chat-textarea" id="chatInput" rows="1" placeholder="Message Owlious AI..." oninput="autoGrowChatInput(this)" onkeydown="onChatKeydown(event)"></textarea>
+        <div class="chat-toolbar">
+          <div class="chat-attach-wrap">
+            <button class="chat-plus-btn" onclick="toggleModelMenu()" title="Attach a file or choose the AI model">
+              <svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              <span class="chat-model-pill" id="chatModelPill">Pollinations</span>
+            </button>
+            <div class="chat-model-menu" id="chatModelMenu">
+              <button class="chat-model-item" onclick="document.getElementById('chatFileInput').click(); closeModelMenu();">
+                <svg viewBox="0 0 24 24" class="chat-model-item-icon"><path d="M21 12.5V7a2 2 0 0 0-2-2H8L4 9v8a2 2 0 0 0 2 2h4"/><path d="M14 21l6-6M14 15h6v6"/></svg>
+                Attach file
+              </button>
+              <div class="chat-model-divider"></div>
+              <button class="chat-model-item" data-model="pollinations" onclick="selectAiModel('pollinations')">Pollinations AI (free, no key needed)</button>
+              <div class="chat-model-divider"></div>
+              <button class="chat-model-item" onclick="exportChatConversation()">
+                <svg viewBox="0 0 24 24" class="chat-model-item-icon"><path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 19h14"/></svg>
+                Export conversation
+              </button>
+              <button class="chat-model-item" onclick="confirmClearChat()">
+                <svg viewBox="0 0 24 24" class="chat-model-item-icon"><path d="M4 7h16M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2m2 0v13a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1V7"/></svg>
+                Clear conversation
+              </button>
+            </div>
+          </div>
+          <input type="file" id="chatFileInput" style="display:none" accept="image/*,application/pdf,.txt,.doc,.docx" onchange="onChatFilePicked(event)">
+          <div class="chat-right-btns">
+            <button class="chat-icon-btn" id="chatMicBtn" onclick="toggleVoiceRecording()" title="Voice message">
+              <svg viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M5 11a7 7 0 0 0 14 0"/><path d="M12 18v3"/></svg>
+            </button>
+            <button class="chat-send-btn" id="chatSendBtn" onclick="sendChatMessage()" title="Send">
+              <svg viewBox="0 0 24 24"><path d="M4 12l16-8-6 8 6 8-16-8z"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="overlay" id="overlay" onclick="closeAllPanels()"></div>
+
+<!-- Item panel: browse info + "apply to your own file" tool -->
+<div class="view-panel" id="viewPanel">
+  <h3 id="viewTitle"></h3>
+  <div class="view-meta">
+    <span id="viewUser"></span>
+    <span id="viewType"></span>
+    <span id="viewViews"></span>
+  </div>
+
+  <div class="drop-zone" id="dropZone" onclick="document.getElementById('userFileInput').click()">
+    Click to upload your own file to apply this effect to
+  </div>
+  <input type="file" id="userFileInput" style="display:none" onchange="onUserFilePicked(event)">
+
+  <canvas class="preview-canvas" id="previewCanvas" style="display:none;"></canvas>
+  <div class="preview-audio-box" id="previewAudioBox"><audio id="previewAudio" controls></audio></div>
+
+  <div id="viewParams" style="display:none;"></div>
+
+  <div id="timelineSection" class="timeline-box" style="display:none;">
+    <div class="params-heading">Timeline</div>
+    <div class="timeline-controls">
+      <button class="play-btn" id="playBtn" onclick="togglePlay()">&#9654; Play</button>
+      <input type="range" id="timelineScrub" min="0" max="1" step="0.005" value="0" oninput="onScrub(this.value)">
+      <span class="timeline-time" id="timelineTimeLabel">0.0s</span>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:8px; margin-top:10px;">
+    <button class="close-btn" id="downloadBtn" onclick="downloadResult()" disabled>Download Frame</button>
+    <button class="close-btn" onclick="shareItem()">Share</button>
+    <button class="close-btn" onclick="closeAllPanels()">Close</button>
+  </div>
+  <div class="rendering-note" id="renderingNote"></div>
+</div>
+
+<!-- Pack detail panel (v2): cover image, info, stats, actions, then content
+     previews by type, then apps / category / style / video / description. -->
+<div class="view-panel pack-panel pack-panel-v2" id="packPanel">
+  <div class="pack-cover-wrap">
+    <img id="packCoverImg" class="pack-cover-img" alt="">
+    <div id="packCoverBlank" class="pack-cover-blank"></div>
+    <button class="pack-close-btn" onclick="closeAllPanels()" title="Close">
+      <svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>
+    </button>
+  </div>
+
+  <div class="pack-panel-body">
+    <h3 id="packTitle"></h3>
+
+    <div class="pack-info-block" id="packInfoBlock"></div>
+
+    <div class="pack-stats-row" id="packStatsRow"></div>
+
+    <div class="pack-action-row">
+      <button class="pack-action-btn primary" id="packDownloadBtn" onclick="downloadPack()">Download All</button>
+      <div class="pack-share-wrap">
+        <button class="pack-action-btn" onclick="togglePackShareMenu()" title="Share">
+          <svg viewBox="0 0 24 24" width="15" height="15"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 10.6l6.8-3.9M8.6 13.4l6.8 3.9"/></svg>
+          Share
+        </button>
+        <div class="pack-share-menu" id="packShareMenu">
+          <button class="chat-model-item" onclick="nativeSharePack()">Share via...</button>
+          <div class="chat-model-divider"></div>
+          <button class="chat-model-item" onclick="sharePackTo('facebook')">Facebook</button>
+          <button class="chat-model-item" onclick="sharePackTo('twitter')">X (Twitter)</button>
+          <button class="chat-model-item" onclick="sharePackTo('whatsapp')">WhatsApp</button>
+          <button class="chat-model-item" onclick="sharePackTo('telegram')">Telegram</button>
+          <div class="chat-model-divider"></div>
+          <button class="chat-model-item" onclick="sharePackTo('copy')">Copy link</button>
+        </div>
+      </div>
+    </div>
+    <div class="pack-downloads-note" id="packDownloadNote"></div>
+
+    <div class="pack-section">
+      <div class="pack-section-heading">
+        Inside this pack (<span id="packItemCount">0</span>)
+        <div class="pack-view-toggle">
+          <button id="packGroupedBtn" onclick="setPackContentsMode('grouped')">Grouped</button>
+          <button id="packFlatBtn" onclick="setPackContentsMode('flat')">All together</button>
+        </div>
+      </div>
+      <div class="pack-contents-list" id="packContentsList"></div>
+    </div>
+
+    <div class="pack-section" id="packAppsSection">
+      <div class="pack-section-heading">Works with</div>
+      <div class="pack-tags" id="packAppTags"></div>
+    </div>
+
+    <div class="pack-section" id="packCatSection">
+      <div class="pack-section-heading">Category</div>
+      <div class="pack-tags" id="packCategoryTags"></div>
+    </div>
+
+    <div class="pack-section" id="packStyleSection">
+      <div class="pack-section-heading">Style</div>
+      <div class="pack-tags" id="packStyleTags"></div>
+    </div>
+
+    <div class="pack-section" id="packVideoSection">
+      <div class="pack-section-heading">Video</div>
+      <a class="pack-video-link" id="packVideoLink" href="#" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" width="14" height="14"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
+        Watch video
+      </a>
+    </div>
+
+    <div class="pack-section" id="packDescSection">
+      <div class="pack-section-heading">Description</div>
+      <p class="pack-desc" id="packDescText"></p>
+    </div>
+  </div>
+</div>
+
+<!-- Full-size image preview for an "image" type pack content item -->
+<div class="img-lightbox" id="imgLightbox" onclick="closeImgLightbox()">
+  <img id="imgLightboxImg" alt="">
+</div>
+
+<!-- Template for one animatable param's envelope editor (cloned per param) -->
+<template id="envelopeTemplate">
+  <svg class="envelope-box" viewBox="0 0 160 90" preserveAspectRatio="none">
+    <line class="envelope-grid" x1="0" y1="45" x2="160" y2="45"></line>
+    <line class="envelope-grid" x1="80" y1="0" x2="80" y2="90"></line>
+    <polyline class="envelope-line" points=""></polyline>
+  </svg>
+</template>
+
+<script src="https://js.puter.com/v2/"></script>
+<script src="effects.js"></script>
+<script src="store.js"></script>
+<script>
+  // Standalone mode: no shared storage. If store.js / effects.js aren't present,
+  // the page still works — item lists are simply empty until the real
+  // Cloudflare-backed store.js is connected and packs are uploaded through
+  // admin.html.
+  if (typeof PhantomStore === 'undefined') {
+    window.PhantomStore = { getItems: async () => [], saveItem: function () {}, deleteItem: function () {}, registerView: function () {}, registerDownload: function () {} };
+  }
+  if (typeof PhantomStore.registerDownload !== 'function') {
+    // Older store.js builds won't have this yet — fall back to a local counter
+    // (per-visitor, in this browser) so the download count still works until
+    // store.js is updated to track it for real.
+    PhantomStore.registerDownload = function (id) { bumpLocalCount(PACK_DL_KEY, id); };
+  }
+  if (typeof PhantomStore.registerShare !== 'function') {
+    PhantomStore.registerShare = function (id) { bumpLocalCount(PACK_SHARE_KEY, id); };
+  }
+  if (typeof EFFECT_TYPES === 'undefined') { window.EFFECT_TYPES = {}; }
+
+  // ---- Local download/share-count fallback (used only if store.js has no real counter) ----
+  const PACK_DL_KEY = 'owliousPackDownloads';
+  const PACK_SHARE_KEY = 'owliousPackShares';
+  function getLocalCounts(storeKey) {
+    try { return JSON.parse(localStorage.getItem(storeKey)) || {}; } catch (_) { return {}; }
+  }
+  function bumpLocalCount(storeKey, id) {
+    const counts = getLocalCounts(storeKey);
+    counts[id] = (counts[id] || 0) + 1;
+    try { localStorage.setItem(storeKey, JSON.stringify(counts)); } catch (_) {}
+    return counts[id];
+  }
+  function getDownloadCount(item) {
+    // Prefer a real server-tracked count; fall back to the local one, since
+    // several visitors downloading at once each bump their own local tally
+    // independently (no shared counter without a backend, by design).
+    const local = getLocalCounts(PACK_DL_KEY)[item.id] || 0;
+    return Math.max(item.downloads || 0, local);
+  }
+  function getShareCount(item) {
+    const local = getLocalCounts(PACK_SHARE_KEY)[item.id] || 0;
+    return Math.max(item.shares || 0, local);
+  }
+
+  function formatSizeKB(kb) {
+    if (!kb) return '';
+    return kb >= 1024 ? (kb / 1024).toFixed(1) + ' MB' : Math.round(kb) + ' KB';
+  }
+
+  // A pack's real size: whatever the admin set, or — if that's missing —
+  // the sum of its own content files, so the number is never just blank.
+  function getPackSizeKB(item) {
+    if (item.sizeKB) return item.sizeKB;
+    const contents = item.contents || [];
+    const totalBytes = contents.reduce((sum, c) => sum + (c.fileSize || 0), 0);
+    return totalBytes ? totalBytes / 1024 : 0;
+  }
+
+  let currentItem = null;
+  let paramValues = {};
+  let animConfig = {}; // animConfig[itemId][paramKey] = { enabled, start, end, duration, nodes }
+  let categoryFilter = { assets: 'all', sfx: 'all' }; // selected filter-chip type per category
+
+  // Timeline playback state
+  let maxDuration = 2;
+  let playheadTime = 0;
+  let isPlaying = false;
+  let playRafId = null;
+  let playLastTs = null;
+
+  // Image path state
+  let userImageEl = null;
+  // Audio path state
+  let userAudioBuffer = null;
+  let renderedAudioBlob = null;
+  let audioRenderTimer = null;
+
+  function showPage(id) {
+    closeAllPanels(); // so the nav stays usable to navigate away from a full-screen pack
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    const btn = document.querySelector('.nav-btn[data-page="' + id + '"]');
+    if (btn) btn.classList.add('active'); // some pages (All, Assets) live only in the side menu now
+    // Fallback for browsers without CSS :has() — only .chat-messages should
+    // scroll while the AI page is open; every other page scrolls normally.
+    document.querySelector('main').classList.toggle('ai-active', id === 'ai');
+  }
+
+  function toggleSideMenu() {
+    document.getElementById('sideMenu').classList.toggle('active');
+    document.getElementById('sideOverlay').classList.toggle('active');
+  }
+
+  function closeSideMenu() {
+    document.getElementById('sideMenu').classList.remove('active');
+    document.getElementById('sideOverlay').classList.remove('active');
+  }
+
+  function goToPage(id) {
+    showPage(id);
+    closeSideMenu();
+  }
+
+  // Defined here so this page never depends on another file providing it.
+  function escapeHtml(str) {
+    return String(str == null ? '' : str)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+  }
+
+  // --- Favorites: saved locally per browser, no account or server needed ---
+  const FAVORITES_KEY = 'owliousFavorites';
+  function getFavoriteIds() {
+    try { return JSON.parse(localStorage.getItem(FAVORITES_KEY) || '[]'); } catch (e) { return []; }
+  }
+  function isFavorite(id) { return getFavoriteIds().includes(id); }
+  function toggleFavorite(id, ev) {
+    if (ev) ev.stopPropagation(); // don't also open the item behind the star
+    let favs = getFavoriteIds();
+    favs = favs.includes(id) ? favs.filter(x => x !== id) : favs.concat([id]);
+    try { localStorage.setItem(FAVORITES_KEY, JSON.stringify(favs)); } catch (e) { /* storage unavailable */ }
+    document.querySelectorAll('.fav-btn[data-id="' + id + '"]').forEach(b => b.classList.toggle('active', favs.includes(id)));
+    renderDiscoverRows(); // keeps the Favorites row on the All page in sync
+  }
+
+  function cardHtml(it) {
+    const isPack = it.category === 'packs';
+    const sizeKB = isPack ? getPackSizeKB(it) : 0;
+    const meta = isPack
+      ? `${it.type} · ${getDownloadCount(it)} downloads`
+      : `${it.type} · ${it.views} views`;
+    const favBtn = isPack ? '' : `
+      <button class="fav-btn${isFavorite(it.id) ? ' active' : ''}" data-id="${it.id}" onclick="toggleFavorite(${it.id}, event)" title="Favorite">
+        <svg viewBox="0 0 24 24"><path d="M12 3l2.6 5.9L21 9.6l-4.6 4.3 1.2 7.1L12 17.6 6.4 21l1.2-7.1L3 9.6l6.4-0.7L12 3z"/></svg>
+      </button>`;
+    return `
+      <div class="recent-card${isPack ? ' pack-card' : ''}" onclick="openItem(${it.id})">
+        ${favBtn}
+        ${it.thumbnail ? `<img src="${it.thumbnail}" alt="${escapeHtml(it.title)}">` : '<div class="thumb-blank"></div>'}
+        <div class="recent-title">${escapeHtml(it.title)}</div>
+        <div class="recent-meta">${meta}</div>
+        ${sizeKB ? `<div class="recent-meta pack-size-line">${formatSizeKB(sizeKB)}</div>` : ''}
+      </div>
+    `;
+  }
+
+  async function renderCategory(category) {
+    const row = document.querySelector('.recent-scroll[data-list="' + category + '"]');
+    if (!row) return;
+    const input = document.querySelector('.searchInput[data-category="' + category + '"]');
+    const query = (input ? input.value : '').toLowerCase();
+    const activeFilter = categoryFilter[category] || 'all';
+
+    const allItems = await PhantomStore.getItems();
+    const items = allItems.filter(i =>
+      (category === 'all' || i.category === category) &&
+      (activeFilter === 'all' || i.type === activeFilter)
+    );
+    const filtered = items.filter(i => i.title.toLowerCase().includes(query) || i.username.toLowerCase().includes(query));
+
+    if (filtered.length === 0) {
+      row.innerHTML = '<div class="empty-msg" style="padding:10px 0;">No items found.</div>';
+      return;
+    }
+
+    row.innerHTML = filtered.map(cardHtml).join('');
+  }
+
+  async function renderFilterChips(category) {
+    const row = document.querySelector('.filter-chips[data-filterrow="' + category + '"]');
+    if (!row) return;
+    const allItems = await PhantomStore.getItems();
+    const types = [...new Set(allItems.filter(i => i.category === category).map(i => i.type))];
+    const active = categoryFilter[category] || 'all';
+
+    const chips = ['all', ...types];
+    row.innerHTML = chips.map(t => `
+      <button class="filter-chip${t === active ? ' active' : ''}" onclick="setCategoryFilter('${category}', '${t}')">${t === 'all' ? 'All' : escapeHtml(t)}</button>
+    `).join('');
+  }
+
+  function setCategoryFilter(category, type) {
+    categoryFilter[category] = type;
+    renderFilterChips(category);
+    renderCategory(category);
+  }
+
+  async function renderTrending() {
+    const row = document.querySelector('.recent-scroll[data-list="trending"]');
+    if (!row) return;
+    const allItems = await PhantomStore.getItems();
+    const top = [...allItems].sort((a, b) => b.views - a.views).slice(0, 8);
+    row.innerHTML = top.length ? top.map(cardHtml).join('') : '<div class="empty-msg" style="padding:10px 0;">Nothing trending yet.</div>';
+  }
+
+  // Discover rows on the Packs page. Best/Trending/Most Downloaded are a
+  // YouTube-style ranking driven by each pack's real download count (with a
+  // view-count tiebreaker) and how recently it was downloaded/uploaded —
+  // see packScore()/packTrendingScore() below. The theme rows (Fantasy,
+  // Sci-Fi, etc.) and Best Theme still read item.theme/item.featured, set
+  // from admin.html, and apply to any item that has them, not just packs.
+  function packsOnly(items) { return items.filter(i => i.category === 'packs'); }
+
+  function packScore(it) {
+    // Weighted so downloads matter most, with views as a secondary signal —
+    // mirrors "most engaged with" rather than pure download count alone.
+    return (getDownloadCount(it) * 3) + (it.views || 0);
+  }
+
+  function packAgeDays(it) {
+    const made = it.createdDate ? new Date(it.createdDate).getTime() : it.id;
+    const days = (Date.now() - made) / 86400000;
+    return Math.max(days, 0.5);
+  }
+
+  function packTrendingScore(it) {
+    // Downloads-per-day since creation — a newer pack with fewer total
+    // downloads can still outrank an old pack coasting on a stale total,
+    // same idea as a "trending" shelf anywhere else.
+    return getDownloadCount(it) / packAgeDays(it);
+  }
+
+  const DISCOVER_ROWS = [
+    { key: 'favorites', filter: items => { const favs = getFavoriteIds(); return items.filter(i => favs.includes(i.id)); } },
+    { key: 'best', filter: items => packsOnly(items).sort((a, b) => packScore(b) - packScore(a)).slice(0, 8) },
+    { key: 'trending2', filter: items => packsOnly(items).sort((a, b) => packTrendingScore(b) - packTrendingScore(a)).slice(0, 8) },
+    { key: 'mostdl', filter: items => packsOnly(items).sort((a, b) => getDownloadCount(b) - getDownloadCount(a)).slice(0, 8) },
+    { key: 'new', filter: items => [...items].sort((a, b) => b.id - a.id).slice(0, 8) },
+    { key: 'featured', filter: items => items.filter(i => i.featured).slice(0, 8) },
+    { key: 'fantasy', filter: items => items.filter(i => i.theme === 'fantasy').slice(0, 8) },
+    { key: 'scifi', filter: items => items.filter(i => i.theme === 'scifi').slice(0, 8) },
+    { key: 'cyberpunk', filter: items => items.filter(i => i.theme === 'cyberpunk').slice(0, 8) },
+    { key: 'classic', filter: items => items.filter(i => i.theme === 'classic').slice(0, 8) }
+  ];
+
+  async function renderDiscoverRows() {
+    const allItems = await PhantomStore.getItems();
+    DISCOVER_ROWS.forEach(row => {
+      const el = document.querySelector('.recent-scroll[data-discover="' + row.key + '"]');
+      if (!el) return;
+      const list = row.filter(allItems);
+      el.innerHTML = list.length ? list.map(cardHtml).join('') : '<div class="empty-msg" style="padding:10px 0;">Nothing here yet.</div>';
+    });
+  }
+
+  function renderAll() {
+    ['assets', 'sfx', 'all'].forEach(renderCategory);
+    ['assets', 'sfx'].forEach(renderFilterChips);
+    renderTrending();
+    renderDiscoverRows();
+  }
+
+  function shareItem() {
+    if (!currentItem) return;
+    const url = location.origin + location.pathname + '?item=' + currentItem.id;
+    const note = document.getElementById('renderingNote');
+    const showCopied = () => { note.textContent = 'Link copied!'; setTimeout(() => { if (note.textContent === 'Link copied!') note.textContent = ''; }, 2000); };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url).then(showCopied).catch(() => window.prompt('Copy this link:', url));
+    } else {
+      window.prompt('Copy this link:', url);
+    }
+  }
+
+  async function openSharedItemFromUrl() {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('item') || params.get('pack');
+    if (!id) return;
+    const items = await PhantomStore.getItems();
+    const item = items.find(i => i.id === Number(id));
+    if (!item) return;
+    // "packs" items live on the #all page (branded "Packs" in the nav),
+    // same page id as before the pack system existed.
+    showPage(item.category === 'packs' ? 'all' : item.category);
+    openItem(item.id);
+  }
+
+  // ================== AI CHAT ==================
+  // Conversation memory: kept in localStorage so it survives reloads, capped at
+  // AI_MEMORY_LIMIT messages. The same array is sent back to the AI with every
+  // new message so it has context and doesn't "forget" earlier in the chat.
+  const AI_MEMORY_KEY = 'owliousAiMemory';
+  const AI_MEMORY_LIMIT = 20;
+  let aiMemory = loadAiMemory();
+  let pendingAttachment = null; // { name, type, dataUrl }
+  let mediaRecorder = null;
+  let recordedChunks = [];
+  let isRecording = false;
+  let isMicBusy = false;   // blocks overlapping mic taps while permission/start is in flight
+  let isSending = false;   // blocks a second send firing before the first one finishes
+
+  // Which AI backend the chat talks to. Pollinations needs no key at all, so
+  // it's the only one that can actually run straight from this file — every
+  // other option (OpenAI, Groq, Gemini, Cloudflare Workers AI) needs its own
+  // server-side key, so those route through your /api/chat backend once it exists.
+  const AI_MODEL_KEY = 'owliousAiModel';
+  const AI_MODEL_LABELS = { pollinations: 'Pollinations AI' };
+  let selectedAiModel = AI_MODEL_LABELS[localStorage.getItem(AI_MODEL_KEY)] ? localStorage.getItem(AI_MODEL_KEY) : 'pollinations';
+
+  let isModelMenuOpen = false;
+
+  function toggleModelMenu() {
+    isModelMenuOpen = !isModelMenuOpen;
+    document.getElementById('chatModelMenu').classList.toggle('open', isModelMenuOpen);
+    if (isModelMenuOpen) updateModelMenuActiveState();
+  }
+
+  function closeModelMenu() {
+    isModelMenuOpen = false;
+    document.getElementById('chatModelMenu').classList.remove('open');
+  }
+
+  function selectAiModel(model) {
+    selectedAiModel = model;
+    try { localStorage.setItem(AI_MODEL_KEY, selectedAiModel); } catch (e) { /* storage unavailable */ }
+    updateModelMenuActiveState();
+    closeModelMenu();
+  }
+
+  function updateModelMenuActiveState() {
+    document.querySelectorAll('.chat-model-item').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.model === selectedAiModel);
+    });
+    document.getElementById('chatModelPill').textContent = AI_MODEL_LABELS[selectedAiModel] || selectedAiModel;
+  }
+
+  // Close the model popup on an outside tap, not on the tap that opened it.
+  document.addEventListener('click', function (e) {
+    if (isModelMenuOpen && !e.target.closest('.chat-attach-wrap')) closeModelMenu();
+  });
+
+  // Downloads the visible conversation as a plain-text file.
+  function exportChatConversation() {
+    closeModelMenu();
+    if (!aiMemory.length) return;
+    const lines = aiMemory.map(m => (m.role === 'user' ? 'You' : 'Owlious AI') + ': ' + m.text);
+    const blob = new Blob([lines.join('\n\n')], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'owlious-chat.txt';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
+  // Wipes the saved conversation after a confirmation, since this can't be undone.
+  function confirmClearChat() {
+    closeModelMenu();
+    if (!aiMemory.length) return;
+    if (!window.confirm("Clear this conversation? This can't be undone.")) return;
+    aiMemory = [];
+    saveAiMemory();
+    document.getElementById('chatMessages').innerHTML = '';
+  }
+
+  function loadAiMemory() {
+    try {
+      const raw = localStorage.getItem(AI_MEMORY_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+  }
+
+  function saveAiMemory() {
+    try {
+      aiMemory = aiMemory.slice(-AI_MEMORY_LIMIT);
+      localStorage.setItem(AI_MEMORY_KEY, JSON.stringify(aiMemory));
+    } catch (e) { /* storage unavailable — chat still works, just won't persist */ }
+  }
+
+  function renderChatFromMemory() {
+    const box = document.getElementById('chatMessages');
+    box.innerHTML = '';
+    aiMemory.forEach(m => appendChatBubble(m.role, m.text, m.file, false, m.role === 'ai', m.ms));
+    box.scrollTop = box.scrollHeight;
+    updateScrollDownButton();
+  }
+
+  function scrollChatToBottom() {
+    const box = document.getElementById('chatMessages');
+    box.scrollTop = box.scrollHeight;
+    updateScrollDownButton();
+  }
+
+  // Shows a floating "jump to latest" button once you've scrolled up more than
+  // ~150px from the bottom — handy once a conversation gets long.
+  function updateScrollDownButton() {
+    const box = document.getElementById('chatMessages');
+    const btn = document.getElementById('chatScrollDownBtn');
+    if (!box || !btn) return;
+    const awayFromBottom = box.scrollHeight - box.scrollTop - box.clientHeight;
+    btn.classList.toggle('show', awayFromBottom > 150);
+  }
+
+  const ICON_COPY = '<svg viewBox="0 0 24 24"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 0 1 2-2h9"/></svg>';
+  const ICON_CHECK = '<svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg>';
+  const ICON_DOTS = '<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.8"/><circle cx="12" cy="12" r="1.8"/><circle cx="19" cy="12" r="1.8"/></svg>';
+
+  // withActions: adds the copy button and the 3-dot menu under an AI message.
+  function appendChatBubble(role, text, file, scroll, withActions, ms) {
+    if (scroll === undefined) scroll = true;
+    const box = document.getElementById('chatMessages');
+    const div = document.createElement('div');
+    div.className = 'chat-msg ' + role;
+    div._text = text || '';
+
+    const textEl = document.createElement('div');
+    textEl.className = 'msg-text';
+    textEl.innerHTML = escapeHtml(text || '').replace(/\n/g, '<br>');
+    div.appendChild(textEl);
+
+    if (file) {
+      if (file.type && file.type.startsWith('image/')) {
+        const img = document.createElement('img');
+        img.className = 'msg-thumb'; img.src = file.dataUrl;
+        div.appendChild(img);
+      } else if (file.type === 'audio') {
+        const audio = document.createElement('audio');
+        audio.className = 'msg-audio'; audio.controls = true; audio.src = file.dataUrl;
+        div.appendChild(audio);
+      } else {
+        const span = document.createElement('span');
+        span.className = 'msg-file';
+        span.innerHTML = '<svg viewBox="0 0 24 24" class="chat-model-item-icon" style="stroke:currentColor;vertical-align:-2px;margin-right:4px;"><path d="M21 12.5V7a2 2 0 0 0-2-2H8L4 9v8a2 2 0 0 0 2 2h4"/><path d="M14 21l6-6M14 15h6v6"/></svg>' + escapeHtml(file.name);
+        div.appendChild(span);
+      }
+    }
+
+    if (withActions) addBubbleActions(div, ms);
+
+    box.appendChild(div);
+    if (scroll) box.scrollTop = box.scrollHeight;
+    updateScrollDownButton();
+    return div;
+  }
+
+  // Copy button + 3-dot menu (+ how long the reply took) under an AI message.
+  function addBubbleActions(div, ms) {
+    const bar = document.createElement('div');
+    bar.className = 'msg-actions';
+
+    const copyBtn = document.createElement('button');
+    copyBtn.className = 'msg-action-btn';
+    copyBtn.title = 'Copy';
+    copyBtn.innerHTML = ICON_COPY;
+    copyBtn.addEventListener('click', function () { copyBubbleText(copyBtn, div); });
+
+    const dotsBtn = document.createElement('button');
+    dotsBtn.className = 'msg-action-btn msg-dots-btn';
+    dotsBtn.title = 'More';
+    dotsBtn.innerHTML = ICON_DOTS;
+    dotsBtn.addEventListener('click', function (e) { e.stopPropagation(); toggleMsgMenu(dotsBtn, div); });
+
+    bar.appendChild(copyBtn);
+    bar.appendChild(dotsBtn);
+    if (ms) {
+      const t = document.createElement('span');
+      t.className = 'msg-time';
+      t.textContent = (ms / 1000).toFixed(1) + 's';
+      t.title = 'Time the AI took';
+      bar.appendChild(t);
+    }
+    div.appendChild(bar);
+  }
+
+  function setBubbleText(bubble, text) {
+    bubble._text = text;
+    bubble.querySelector('.msg-text').innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+    const box = document.getElementById('chatMessages');
+    if (box.scrollHeight - box.scrollTop - box.clientHeight < 120) box.scrollTop = box.scrollHeight;
+    updateScrollDownButton();
+  }
+
+  // ---- Copy button ----
+  async function copyBubbleText(btn, bubble) {
+    const text = bubble._text || '';
+    let ok = false;
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+        ok = true;
+      }
+    } catch (e) { /* fall through to the fallback below */ }
+    if (!ok) {
+      const ta = document.createElement('textarea');
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+      document.body.appendChild(ta); ta.select();
+      try { ok = document.execCommand('copy'); } catch (e) {}
+      ta.remove();
+    }
+    btn.innerHTML = ok ? ICON_CHECK : ICON_COPY;
+    btn.title = ok ? 'Copied' : 'Copy failed';
+    setTimeout(function () { btn.innerHTML = ICON_COPY; btn.title = 'Copy'; }, 1500);
+  }
+
+  // ---- 3-dot menu (Retry / Search the web) ----
+  let msgMenuTarget = null;
+
+  function closeMsgMenu() {
+    document.getElementById('msgMenu').classList.remove('open');
+    msgMenuTarget = null;
+  }
+
+  function toggleMsgMenu(btn, bubble) {
+    const menu = document.getElementById('msgMenu');
+    if (msgMenuTarget === bubble && menu.classList.contains('open')) { closeMsgMenu(); return; }
+    msgMenuTarget = bubble;
+
+    // Retry only makes sense on the most recent AI message.
+    const box = document.getElementById('chatMessages');
+    const aiBubbles = box.querySelectorAll('.chat-msg.ai');
+    const isLast = aiBubbles[aiBubbles.length - 1] === bubble;
+    document.getElementById('msgMenuRetry').style.display = isLast ? 'flex' : 'none';
+
+    const r = btn.getBoundingClientRect();
+    const h = menu.offsetHeight || 90;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - 188));
+    const top = (r.bottom + h + 14 < window.innerHeight) ? (r.bottom + 6) : Math.max(8, r.top - h - 6);
+    menu.style.left = left + 'px';
+    menu.style.top = top + 'px';
+    menu.classList.add('open');
+  }
+
+  document.addEventListener('click', function (e) {
+    if (!e.target.closest('#msgMenu') && !e.target.closest('.msg-dots-btn')) closeMsgMenu();
+  });
+
+  function searchWebForBubble() {
+    const bubble = msgMenuTarget;
+    closeMsgMenu();
+    if (!bubble) return;
+    // Search for what the person asked (the user message just above this reply).
+    let q = bubble._text || '';
+    let prev = bubble.previousElementSibling;
+    while (prev) {
+      if (prev.classList.contains('user')) { q = prev._text || q; break; }
+      prev = prev.previousElementSibling;
+    }
+    window.open('https://duckduckgo.com/?q=' + encodeURIComponent(q.slice(0, 300)), '_blank', 'noopener');
+  }
+
+  async function retryLastReply() {
+    const bubble = msgMenuTarget;
+    closeMsgMenu();
+    if (isSending || !bubble) return;
+
+    // Find the last thing the user said and drop any AI reply that followed it.
+    let idx = -1;
+    for (let i = aiMemory.length - 1; i >= 0; i--) { if (aiMemory[i].role === 'user') { idx = i; break; } }
+    if (idx === -1) return;
+    const userMsg = aiMemory[idx];
+    aiMemory = aiMemory.slice(0, idx + 1);
+    saveAiMemory();
+    bubble.remove();
+
+    isSending = true;
+    const sendBtn = document.getElementById('chatSendBtn');
+    sendBtn.disabled = true;
+    try {
+      await runReply(userMsg, aiMemory.slice(0, idx));
+    } finally {
+      isSending = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  function autoGrowChatInput(el) {
+    el.style.height = 'auto';
+    el.style.height = Math.min(el.scrollHeight, 110) + 'px';
+  }
+
+  function onChatKeydown(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendChatMessage();
+    }
+  }
+
+  function onChatFilePicked(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      pendingAttachment = { name: file.name, type: file.type, dataUrl: reader.result };
+      renderAttachPreview();
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function renderAttachPreview() {
+    const row = document.getElementById('chatAttachPreview');
+    if (!pendingAttachment) { row.innerHTML = ''; return; }
+    row.innerHTML =
+      '<div class="chat-attach-chip">' +
+      '<svg viewBox="0 0 24 24" class="chat-model-item-icon"><path d="M21 12.5V7a2 2 0 0 0-2-2H8L4 9v8a2 2 0 0 0 2 2h4"/><path d="M14 21l6-6M14 15h6v6"/></svg>' +
+      escapeHtml(pendingAttachment.name) +
+      '<button onclick="clearAttachment()"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></button></div>';
+  }
+
+  function clearAttachment() {
+    pendingAttachment = null;
+    document.getElementById('chatFileInput').value = '';
+    renderAttachPreview();
+  }
+
+  async function toggleVoiceRecording() {
+    if (isMicBusy) return;
+    if (isRecording) { if (mediaRecorder) mediaRecorder.stop(); return; }
+    isMicBusy = true;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if (e.data.size > 0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = () => {
+        isRecording = false;
+        document.getElementById('chatMicBtn').classList.remove('recording');
+        stream.getTracks().forEach(t => t.stop());
+        const blob = new Blob(recordedChunks, { type: 'audio/webm' });
+        const reader = new FileReader();
+        reader.onload = () => {
+          pendingAttachment = { name: 'Voice message', type: 'audio', dataUrl: reader.result };
+          renderAttachPreview();
+        };
+        reader.readAsDataURL(blob);
+      };
+      mediaRecorder.start();
+      isRecording = true;
+      document.getElementById('chatMicBtn').classList.add('recording');
+    } catch (e) {
+      appendChatBubble('ai', "Couldn't access the microphone.");
+    } finally {
+      isMicBusy = false;
+    }
+  }
+
+  async function sendChatMessage() {
+    if (isSending) return; // ignore a second tap while the first message is still in flight
+    const input = document.getElementById('chatInput');
+    const text = input.value.trim();
+    if (!text && !pendingAttachment) return;
+
+    isSending = true;
+    const sendBtn = document.getElementById('chatSendBtn');
+    sendBtn.disabled = true;
+
+    // Everything is inside try/finally so the send lock ALWAYS releases, and any
+    // failure is shown in the chat instead of failing silently.
+    try {
+      const priorHistory = aiMemory.slice();
+      const userMsg = { role: 'user', text: text, file: pendingAttachment, ts: Date.now() };
+      aiMemory.push(userMsg);
+      appendChatBubble('user', text, pendingAttachment);
+
+      input.value = '';
+      autoGrowChatInput(input);
+      clearAttachment();
+      saveAiMemory();
+
+      await runReply(userMsg, priorHistory);
+    } catch (e) {
+      showChatError(e);
+    } finally {
+      isSending = false;
+      sendBtn.disabled = false;
+    }
+  }
+
+  // Asks the AI for a reply to userMsg (priorHistory = everything before it),
+  // streams it into a bubble as it arrives, and times how long it takes.
+  // Used by both Send and Retry.
+  async function runReply(userMsg, priorHistory) {
+    const bubble = appendChatBubble('ai', '...');
+    const status = document.createElement('div');
+    status.className = 'msg-status';
+    bubble.appendChild(status);
+
+    const start = Date.now();
+    let gotText = false;
+    let lastChunkAt = start;
+
+    // Live timer + "detector": tells you whether the AI is still thinking,
+    // actively writing, or has gone quiet — so a long answer never looks stuck.
+    function tick() {
+      const now = Date.now();
+      const total = (now - start) / 1000;
+      status.textContent = !gotText
+        ? 'Thinking... ' + Math.floor(total) + 's'
+        : 'Writing... ' + total.toFixed(1) + 's';
+    }
+    tick();
+    const ticker = setInterval(tick, 250);
+
+    function onText(fullText) {
+      gotText = true;
+      lastChunkAt = Date.now();
+      setBubbleText(bubble, fullText);
+    }
+
+    try {
+      const reply = await getAIResponse(userMsg.text, userMsg.file, priorHistory, onText);
+      const ms = Date.now() - start;
+      setBubbleText(bubble, reply);
+      status.remove();
+      addBubbleActions(bubble, ms);
+      aiMemory.push({ role: 'ai', text: reply, ts: Date.now(), ms: ms });
+      saveAiMemory();
+    } catch (e) {
+      const ms = Date.now() - start;
+      status.remove();
+      if (gotText && bubble._text) {
+        // The AI went quiet part-way through: keep what it already wrote.
+        const note = document.createElement('div');
+        note.className = 'msg-note';
+        note.textContent = 'Error: stopped early.';
+        bubble.appendChild(note);
+        addBubbleActions(bubble, ms);
+        aiMemory.push({ role: 'ai', text: bubble._text, ts: Date.now(), ms: ms });
+        saveAiMemory();
+      } else {
+        bubble.remove();
+        showChatError(e);
+      }
+    } finally {
+      clearInterval(ticker);
+    }
+  }
+
+  // Puts a readable error in the chat (with the real reason) so failures are visible.
+  function showChatError(e) {
+    let msg;
+    if (e && e.name === 'AbortError') {
+      msg = 'Error: no response.';
+    } else if (selectedAiModel !== 'pollinations') {
+      msg = 'Error: ' + (AI_MODEL_LABELS[selectedAiModel] || selectedAiModel) + ' is not connected.';
+    } else {
+      msg = "Error: couldn't reach the AI.";
+    }
+    try { appendChatBubble('ai', msg, null, true, true); } catch (_) { /* nothing more we can do */ }
+  }
+
+  // Safety net: any uncaught error shows up in the chat instead of vanishing.
+  window.addEventListener('error', function (ev) {
+    try { appendChatBubble('ai', 'Error: ' + ev.message); } catch (_) {}
+  });
+  window.addEventListener('unhandledrejection', function (ev) {
+    try { appendChatBubble('ai', 'Error: ' + (ev.reason && ev.reason.message ? ev.reason.message : ev.reason)); } catch (_) {}
+  });
+
+  // Fixed time limits are the wrong tool for long answers, so replies are limited by
+  // SILENCE, not total length: the request is only cancelled if the AI sends
+  // nothing for a while. A long answer that keeps arriving can run as long as it needs.
+  const AI_FIRST_BYTE_MS = 45000; // max wait for the very first data (queue + thinking time)
+  const AI_IDLE_MS = 25000;       // max quiet gap once data has started flowing
+
+  function makeWatchdog(firstMs, idleMs) {
+    const controller = new AbortController();
+    let timer = null;
+    return {
+      signal: controller.signal,
+      arm: function (ms) { clearTimeout(timer); timer = setTimeout(function () { controller.abort(); }, ms); },
+      start: function () { this.arm(firstMs); },
+      beat: function () { this.arm(idleMs); },
+      stop: function () { clearTimeout(timer); }
+    };
+  }
+
+  // Simple request with one overall limit (used for your own /api/chat backend).
+  async function fetchWithTimeout(url, options, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms || 60000);
+    try {
+      return await fetch(url, Object.assign({}, options, { signal: controller.signal }));
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Point this at your own backend (e.g. the Render API), which calls the AI
+  // provider server-side. Never put a real API key in this file — anyone who
+  // views the page source would be able to read and use it.
+  //
+  // For the "openai" model, have that backend call OpenAI's Responses API:
+  //   POST https://api.openai.com/v1/responses
+  //   headers: { Authorization: 'Bearer ' + YOUR_KEY, 'Content-Type': 'application/json' }
+  //   body: { model: 'gpt-4o-mini', input: message }
+  // This can't be called directly from this file — every OpenAI request needs a
+  // secret key, and any key placed here would be visible to every visitor.
+  //
+  // `history` is everything BEFORE the current message; onText(fullText) is called
+  // as text streams in (only Pollinations streams right now).
+  async function getAIResponse(text, file, history, onText) {
+    if (selectedAiModel === 'pollinations') {
+      return getPollinationsResponse(text, history, onText);
+    }
+    if (selectedAiModel === 'vireonix') {
+      return getVireonixResponse(text, history);
+    }
+    if (selectedAiModel === 'prexzy') {
+      return getPrexzyResponse(text);
+    }
+    if (selectedAiModel === 'puter') {
+      return getPuterResponse(text, file, history);
+    }
+
+    const res = await fetchWithTimeout('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: selectedAiModel,
+        message: text,
+        history: history.slice(-AI_MEMORY_LIMIT).map(m => ({ role: m.role, text: m.text }))
+        // add 'file' here too once your backend accepts attachments
+      })
+    }, 60000);
+    if (!res.ok) throw new Error('Bad response');
+    const data = await res.json();
+    return data.reply || "I didn't get a response.";
+  }
+
+  // vireonix.ai — I have no documentation for this service and couldn't reach
+  // it from here to check. Its path (/v1/chat/completions) matches the same
+  // shape OpenAI and most compatible APIs use, so that's what this sends.
+  // If it behaves differently, tell me the exact error shown and I'll adjust.
+  async function getVireonixResponse(text, history) {
+    const prior = history.slice(-AI_MEMORY_LIMIT).filter(m => m.text);
+    const messages = prior.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }));
+    messages.push({ role: 'user', content: text || '(sent an attachment)' });
+
+    const res = await fetchWithTimeout('https://vireonix.ai/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ model: 'default', messages: messages })
+    }, 30000);
+    if (!res.ok) throw new Error('Bad response (' + res.status + ')');
+    const data = await res.json();
+    const out = (data.choices && data.choices[0] && data.choices[0].message && data.choices[0].message.content)
+      || data.reply || data.response || data.answer || data.text;
+    if (!out) throw new Error('Unrecognized response shape');
+    return out;
+  }
+
+  // prexzyapis.com — also undocumented from here. Its URL shape (?q=...) looks
+  // like a single GET call rather than a proper chat API, so this can only send
+  // your latest message, not the full conversation — this service may not
+  // remember earlier turns the way the others do.
+  async function getPrexzyResponse(text) {
+    const url = 'https://prexzyapis.com/ai/chatgpt?q=' + encodeURIComponent(text || 'hello');
+    const res = await fetchWithTimeout(url, {}, 30000);
+    if (!res.ok) throw new Error('Bad response (' + res.status + ')');
+
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.indexOf('json') !== -1) {
+      const data = await res.json();
+      const out = data.reply || data.response || data.answer || data.result || data.message || data.text;
+      if (!out) throw new Error('Unrecognized response shape');
+      return out;
+    }
+    const out = (await res.text()).trim();
+    if (!out) throw new Error('Empty response');
+    return out;
+  }
+
+  // Puter.js (https://js.puter.com/v2/) runs the request through the visitor's
+  // own Puter account rather than a key you hold — that's why no backend is
+  // needed. Puter shows its OWN small login/sign-up popup the first time a
+  // visitor uses it; that's Puter's UI, not this site's, and is normal.
+  // NOTE: I can't reach the internet from where I'm working, so this is built
+  // from documented usage rather than a live test — check your browser console
+  // if a reply looks wrong, and tell me what it shows.
+  async function getPuterResponse(text, file, history) {
+    if (typeof puter === 'undefined' || !puter.ai || !puter.ai.chat) {
+      throw new Error('Puter script did not load');
+    }
+
+    const prior = history.slice(-AI_MEMORY_LIMIT).filter(m => m.text);
+    let prompt = prior.map(m => (m.role === 'ai' ? 'Assistant: ' : 'User: ') + m.text).join('\n');
+    prompt += (prompt ? '\n' : '') + 'User: ' + (text || '(sent an attachment)');
+
+    let result;
+    if (file && file.type && file.type.startsWith('image/')) {
+      // Vision call: image + prompt together.
+      result = await puter.ai.chat(prompt, file.dataUrl);
+    } else {
+      result = await puter.ai.chat(prompt);
+    }
+
+    // Defensive parsing: Puter's return shape has varied across versions.
+    if (typeof result === 'string') return result;
+    if (result && result.message && result.message.content) return result.message.content;
+    if (result && result.text) return result.text;
+    if (result && typeof result.toString === 'function') {
+      const s = result.toString();
+      if (s && s !== '[object Object]') return s;
+    }
+    throw new Error('Unrecognized Puter response shape');
+  }
+
+  // Streams an OpenAI-style (server-sent events) reply, calling onText with the
+  // text so far. If the server ignores streaming and sends normal JSON, that works too.
+  async function streamPollinationsChat(messages, onText) {
+    const dog = makeWatchdog(AI_FIRST_BYTE_MS, AI_IDLE_MS);
+    let full = '';
+    try {
+      dog.start();
+      const res = await fetch('https://text.pollinations.ai/openai', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model: 'openai', messages: messages, stream: true }),
+        signal: dog.signal
+      });
+      if (!res.ok) throw new Error('Bad response (' + res.status + ')');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let raw = '';
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        dog.beat();
+        const piece = decoder.decode(chunk.value, { stream: true });
+        raw += piece;
+        buffer += piece;
+        const lines = buffer.split('\n');
+        buffer = lines.pop();
+        for (const line of lines) {
+          const t = line.trim();
+          if (!t.startsWith('data:')) continue;
+          const payload = t.slice(5).trim();
+          if (!payload || payload === '[DONE]') continue;
+          try {
+            const j = JSON.parse(payload);
+            const c = j.choices && j.choices[0];
+            const delta = c && ((c.delta && c.delta.content) || (c.message && c.message.content));
+            if (delta) { full += delta; onText && onText(full); }
+          } catch (_) { /* ignore a partial or non-JSON line */ }
+        }
+      }
+      if (!full) {
+        // Not a stream after all — maybe one plain JSON answer.
+        try {
+          const j = JSON.parse(raw);
+          full = (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content) || '';
+          if (full && onText) onText(full);
+        } catch (_) {}
+      }
+      if (!full) throw new Error('Empty response');
+      return full;
+    } catch (err) {
+      err.partial = full;
+      throw err;
+    } finally {
+      dog.stop();
+    }
+  }
+
+  // Fallback: Pollinations' plain-text endpoint, read the same silence-based way.
+  async function streamPollinationsPlain(prompt, onText) {
+    const dog = makeWatchdog(AI_FIRST_BYTE_MS, AI_IDLE_MS);
+    let full = '';
+    try {
+      dog.start();
+      const res = await fetch('https://text.pollinations.ai/' + encodeURIComponent(prompt), { signal: dog.signal });
+      if (!res.ok) throw new Error('Bad response (' + res.status + ')');
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      while (true) {
+        const chunk = await reader.read();
+        if (chunk.done) break;
+        dog.beat();
+        full += decoder.decode(chunk.value, { stream: true });
+        if (onText) onText(full);
+      }
+      full = full.trim();
+      if (!full) throw new Error('Empty response');
+      return full;
+    } catch (err) {
+      err.partial = full;
+      throw err;
+    } finally {
+      dog.stop();
+    }
+  }
+
+  async function getPollinationsResponse(text, history, onText) {
+    const current = text || '(sent an attachment)';
+    const prior = history.slice(-AI_MEMORY_LIMIT).filter(m => m.text);
+
+    try {
+      const messages = prior.map(m => ({ role: m.role === 'ai' ? 'assistant' : 'user', content: m.text }));
+      messages.push({ role: 'user', content: current });
+      const packContext = await buildPackContextForAI();
+      if (packContext) messages.unshift({ role: 'system', content: packContext });
+      return await streamPollinationsChat(messages, onText);
+    } catch (firstErr) {
+      // If some text already arrived, don't start over — let the caller keep it.
+      if (firstErr.partial) throw firstErr;
+      let prompt = prior.slice(-6).map(m => (m.role === 'ai' ? 'Assistant: ' : 'User: ') + m.text).join('\n');
+      prompt += '\nUser: ' + current + '\nAssistant:';
+      prompt = prompt.slice(-1500);
+      try {
+        return await streamPollinationsPlain(prompt, onText);
+      } catch (secondErr) {
+        throw secondErr.partial ? secondErr : firstErr;
+      }
+    }
+  }
+
+  async function openItem(id) {
+    const items = await PhantomStore.getItems();
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    PhantomStore.registerView(id);
+    renderCategory(item.category);
+
+    if (item.category === 'packs') { openPackDetail(item); return; }
+
+    currentItem = item;
+    userImageEl = null;
+    userAudioBuffer = null;
+    renderedAudioBlob = null;
+
+    document.getElementById('viewTitle').textContent = item.title;
+    document.getElementById('viewUser').textContent = 'Made by ' + item.username;
+    document.getElementById('viewType').textContent = item.type;
+    document.getElementById('viewViews').textContent = item.views + ' views';
+
+    const def = EFFECT_TYPES[item.effectType];
+    const isAudio = def && def.kind === 'audio';
+    document.getElementById('dropZone').textContent = isAudio
+      ? 'Click to upload your own audio to apply this effect to'
+      : 'Click to upload your own image to apply this effect to';
+    document.getElementById('userFileInput').accept = isAudio ? 'audio/*' : 'image/*';
+
+    document.getElementById('previewCanvas').style.display = 'none';
+    document.getElementById('previewAudioBox').style.display = 'none';
+    document.getElementById('downloadBtn').disabled = true;
+    document.getElementById('renderingNote').textContent = '';
+    document.getElementById('userFileInput').value = '';
+
+    stopPlayback();
+    playheadTime = 0;
+    animConfig[item.id] = {};
+    paramValues[item.id] = Object.assign({}, item.params);
+    renderViewParams(item);
+    hideTimeline();
+
+    document.getElementById('overlay').classList.add('active');
+    document.getElementById('viewPanel').classList.add('active');
+  }
+
+  // ================== PACK DETAIL PANEL ==================
+  let currentPack = null;
+  let packContentsMode = 'grouped'; // 'grouped' = sectioned by group label, 'flat' = one list
+
+  // Maps a content item's type to the little icon shown when it has no
+  // thumbnail of its own (audio/plugin/animated text/other never do).
+  const PACK_TYPE_ICONS = {
+    audio: '<path d="M9 2v12a3 3 0 1 1-2-2.83V5h8V2H9z"/>',
+    video: '<rect x="2" y="5" width="15" height="14" rx="2"/><path d="M22 8l-5 4 5 4V8z"/>',
+    xml: '<path d="M8 3L3 8l5 5M16 3l5 5-5 5"/>',
+    plugin: '<rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3"/>',
+    animatedtext: '<path d="M4 7V5h16v2M9 5v14m-3 0h6"/>',
+    preset: '<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
+    other: '<circle cx="12" cy="12" r="8"/>'
+  };
+  const PACK_TYPE_LABELS = { image: 'Image', audio: 'Audio', video: 'Video', xml: 'XML', plugin: 'Plugin', animatedtext: 'Animated Text', preset: 'Preset/Template', other: 'Other' };
+  const PACK_TYPE_ORDER = ['image', 'video', 'audio', 'xml', 'preset', 'plugin', 'animatedtext', 'other'];
+
+  // Older packs only had a free-text "group" field and no formal type — infer
+  // one so they still render sensibly in the new type-based sections.
+  function packContentType(c) {
+    if (c.type) return c.type;
+    if (c.thumbnail && !c.xml) return 'image';
+    if (c.xml) return 'xml';
+    return 'other';
+  }
+
+  async function openPackDetail(item) {
+    currentPack = item;
+    packContentsMode = 'grouped';
+
+    // Sit exactly below the real nav bar (its height varies with font
+    // loading/screen size) so Owlious/menu/Packs/AI stay visible on top.
+    const navEl = document.querySelector('nav');
+    const packPanelEl = document.getElementById('packPanel');
+    packPanelEl.style.top = navEl.offsetHeight + 'px';
+    // Re-measure a beat later in case a web font swap just reflowed the nav
+    // (fonts can finish loading after this first measurement).
+    requestAnimationFrame(() => { packPanelEl.style.top = navEl.offsetHeight + 'px'; });
+
+    // Single main thumbnail only (whatever the admin uploaded for this pack) —
+    // no multi-image collage; the 16:9 box just stays blank if none was set.
+    const coverImg = document.getElementById('packCoverImg');
+    const coverBlank = document.getElementById('packCoverBlank');
+    if (item.thumbnail) { coverImg.src = item.thumbnail; coverImg.style.display = 'block'; coverBlank.style.display = 'none'; }
+    else { coverImg.style.display = 'none'; coverBlank.style.display = 'flex'; }
+
+    document.getElementById('packTitle').textContent = item.title;
+
+    const infoBlock = document.getElementById('packInfoBlock');
+    const infoRows = [];
+    if (item.origin) infoRows.push(['Made with', item.origin]);
+    if (item.createdDate) infoRows.push(['Created', item.createdDate]);
+    infoRows.push(['Made by', item.username || 'you']);
+    infoBlock.innerHTML = infoRows.map(([label, val]) =>
+      `<div><span class="pack-info-label">${escapeHtml(label)}</span>${escapeHtml(String(val))}</div>`
+    ).join('');
+
+    const sizeKB = getPackSizeKB(item);
+    document.getElementById('packStatsRow').innerHTML = `
+      <div><b>${getDownloadCount(item)}</b><span>Downloads</span></div>
+      <div><b>${sizeKB ? formatSizeKB(sizeKB) : '—'}</b><span>Size</span></div>
+    `;
+
+    const tagRow = (elId, sectionId, list) => {
+      document.getElementById(elId).innerHTML = (list || []).map(t => `<span class="pack-tag">${escapeHtml(t)}</span>`).join('');
+      document.getElementById(sectionId).style.display = (list && list.length) ? 'block' : 'none';
+    };
+    tagRow('packAppTags', 'packAppsSection', item.apps);
+    tagRow('packCategoryTags', 'packCatSection', item.categoryTags);
+    tagRow('packStyleTags', 'packStyleSection', item.styleTags);
+
+    const videoSection = document.getElementById('packVideoSection');
+    if (item.videoLink) { document.getElementById('packVideoLink').href = item.videoLink; videoSection.style.display = 'block'; }
+    else { videoSection.style.display = 'none'; }
+
+    const descSection = document.getElementById('packDescSection');
+    if (item.description) { document.getElementById('packDescText').textContent = item.description; descSection.style.display = 'block'; }
+    else { descSection.style.display = 'none'; }
+
+    document.getElementById('packItemCount').textContent = (item.contents || []).length;
+    renderPackContents();
+    updatePackViewToggle();
+    document.getElementById('packDownloadNote').textContent = '';
+    closePackShareMenu();
+
+    document.getElementById('overlay').classList.add('active');
+    document.getElementById('packPanel').classList.add('active');
+  }
+
+  function updatePackViewToggle() {
+    document.getElementById('packGroupedBtn').classList.toggle('active', packContentsMode === 'grouped');
+    document.getElementById('packFlatBtn').classList.toggle('active', packContentsMode === 'flat');
+  }
+
+  function setPackContentsMode(mode) {
+    packContentsMode = mode;
+    updatePackViewToggle();
+    renderPackContents();
+  }
+
+  function packContentRowHtml(c, idx) {
+    const type = packContentType(c);
+    const thumb = (type === 'image' && c.file) ? `<img src="${c.file}" alt="${escapeHtml(c.name || '')}">`
+      : (c.thumbnail ? `<img src="${c.thumbnail}" alt="${escapeHtml(c.name || '')}">`
+      : `<div class="pack-content-icon"><svg viewBox="0 0 24 24">${PACK_TYPE_ICONS[type] || PACK_TYPE_ICONS.other}</svg></div>`);
+
+    let primaryBtn = '';
+    if (type === 'image' && c.file) primaryBtn = `<button class="pack-xml-btn" onclick="openImgLightbox(${idx})">View</button>`;
+    else if (type === 'video' && c.file) primaryBtn = `<button class="pack-xml-btn" onclick="togglePackContentVideo(${idx})">Play</button>`;
+    else if (type === 'audio' && c.file) primaryBtn = `<button class="pack-xml-btn" onclick="togglePackContentAudio(${idx})">Play</button>`;
+    else if (type === 'xml' && (c.xml || c.file)) primaryBtn = `<button class="pack-xml-btn" onclick="togglePackContentXml(${idx})">Preview</button>`;
+
+    const xmlBtn = (type !== 'xml' && c.xml)
+      ? `<button class="pack-xml-btn" onclick="togglePackContentXml(${idx})">&lt;&gt; XML</button>` : '';
+
+    return `
+      <div class="pack-content-row">
+        ${thumb}
+        <div class="pack-content-name">
+          <span class="n">${escapeHtml(c.name || ('Item ' + (idx + 1)))}</span>
+          <span class="t">${PACK_TYPE_LABELS[type] || 'Other'}</span>
+        </div>
+        <div class="pack-content-actions">${primaryBtn}${xmlBtn}</div>
+      </div>
+      ${c.xml ? `<pre class="pack-xml-pre" id="packContentXml${idx}">${escapeHtml(c.xml)}</pre>` : ''}
+      ${type === 'audio' && c.file ? `<div class="pack-content-audio" id="packContentAudio${idx}"><audio controls src="${c.file}"></audio></div>` : ''}
+      ${type === 'video' && c.file ? `<div class="pack-content-audio" id="packContentVideo${idx}"><video controls style="width:100%; border-radius:6px;" src="${c.file}"></video></div>` : ''}
+    `;
+  }
+
+  function renderPackContents() {
+    const container = document.getElementById('packContentsList');
+    const contents = (currentPack && currentPack.contents) || [];
+    if (!contents.length) {
+      container.innerHTML = '<div class="empty-msg" style="padding:10px 0;">No content list provided for this pack yet.</div>';
+      return;
+    }
+
+    if (packContentsMode === 'flat') {
+      container.innerHTML = contents.map((c, i) => packContentRowHtml(c, i)).join('');
+      return;
+    }
+
+    // Grouped: sectioned by content type (Images, Audio, XML, Plugins,
+    // Animated Text, Other) in a fixed, predictable order.
+    const groups = {};
+    contents.forEach((c, i) => {
+      const t = packContentType(c);
+      if (!groups[t]) groups[t] = [];
+      groups[t].push({ c, i });
+    });
+    container.innerHTML = PACK_TYPE_ORDER.filter(t => groups[t]).map(t => `
+      <div class="pack-content-group-label">${PACK_TYPE_LABELS[t]} (${groups[t].length})</div>
+      ${groups[t].map(({ c, i }) => packContentRowHtml(c, i)).join('')}
+    `).join('');
+  }
+
+  function togglePackContentXml(idx) {
+    const el = document.getElementById('packContentXml' + idx);
+    if (el) el.classList.toggle('active');
+  }
+
+  function togglePackContentAudio(idx) {
+    const el = document.getElementById('packContentAudio' + idx);
+    if (!el) return;
+    el.classList.toggle('active');
+    const audio = el.querySelector('audio');
+    if (el.classList.contains('active')) audio.play().catch(() => {});
+    else audio.pause();
+  }
+
+  function togglePackContentVideo(idx) {
+    const el = document.getElementById('packContentVideo' + idx);
+    if (!el) return;
+    el.classList.toggle('active');
+    const video = el.querySelector('video');
+    if (el.classList.contains('active')) video.play().catch(() => {});
+    else video.pause();
+  }
+
+  function openImgLightbox(idx) {
+    const c = currentPack && currentPack.contents && currentPack.contents[idx];
+    if (!c || !c.file) return;
+    document.getElementById('imgLightboxImg').src = c.file;
+    document.getElementById('imgLightbox').classList.add('active');
+  }
+
+  function closeImgLightbox() {
+    document.getElementById('imgLightbox').classList.remove('active');
+  }
+
+  // ---- Minimal ZIP builder (STORE method, no deps) so "Download All" can
+  // bundle every content file into one real .zip entirely offline. ----
+  function crc32(bytes) {
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < bytes.length; i++) {
+      let c = (crc ^ bytes[i]) & 0xFF;
+      for (let k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      crc = (crc >>> 8) ^ c;
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+  }
+  function zU16(n) { return new Uint8Array([n & 0xFF, (n >>> 8) & 0xFF]); }
+  function zU32(n) { return new Uint8Array([n & 0xFF, (n >>> 8) & 0xFF, (n >>> 16) & 0xFF, (n >>> 24) & 0xFF]); }
+  function zConcat(arrays) {
+    let total = 0; arrays.forEach(a => total += a.length);
+    const out = new Uint8Array(total);
+    let off = 0; arrays.forEach(a => { out.set(a, off); off += a.length; });
+    return out;
+  }
+  function dataUrlToBytes(dataUrl) {
+    const base64 = (dataUrl.split(',')[1] || '');
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+  function buildZipBlob(files) {
+    const enc = new TextEncoder();
+    const localParts = [], centralParts = [];
+    let offset = 0;
+    files.forEach(f => {
+      const nameBytes = enc.encode(f.name);
+      const data = f.data;
+      const crc = crc32(data);
+      const size = data.length;
+      const localHeader = zConcat([zU32(0x04034b50), zU16(20), zU16(0), zU16(0), zU16(0), zU16(0),
+        zU32(crc), zU32(size), zU32(size), zU16(nameBytes.length), zU16(0)]);
+      const localEntry = zConcat([localHeader, nameBytes, data]);
+      localParts.push(localEntry);
+      const centralHeader = zConcat([zU32(0x02014b50), zU16(20), zU16(20), zU16(0), zU16(0), zU16(0), zU16(0),
+        zU32(crc), zU32(size), zU32(size), zU16(nameBytes.length), zU16(0), zU16(0), zU16(0), zU16(0),
+        zU32(0), zU32(offset)]);
+      centralParts.push(zConcat([centralHeader, nameBytes]));
+      offset += localEntry.length;
+    });
+    const localBuf = zConcat(localParts);
+    const centralBuf = zConcat(centralParts);
+    const end = zConcat([zU32(0x06054b50), zU16(0), zU16(0), zU16(files.length), zU16(files.length),
+      zU32(centralBuf.length), zU32(localBuf.length), zU16(0)]);
+    return new Blob([localBuf, centralBuf, end], { type: 'application/zip' });
+  }
+
+  function extForType(type) {
+    return { image: '.png', audio: '.mp3', video: '.mp4', xml: '.xml', plugin: '.bin', animatedtext: '.txt', preset: '.zip', other: '.bin' }[type] || '.bin';
+  }
+
+  // Everything in one click: bundles the manifest, description, example XML,
+  // and every content item's actual file (image/audio/plugin/etc.) into a
+  // single .zip — no picking files one at a time.
+  async function downloadPack() {
+    if (!currentPack) return;
+    const note = document.getElementById('packDownloadNote');
+    const item = currentPack;
+
+    try {
+      if (item.downloadUrl) {
+        // A real hosted file (e.g. on your Cloudflare storage) — download it directly.
+        const a = document.createElement('a');
+        a.href = item.downloadUrl;
+        a.download = item.title + (item.downloadUrl.match(/\.[a-z0-9]+$/i) || [''])[0];
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        const files = [];
+        const manifest = {
+          title: item.title, description: item.description || '', origin: item.origin || '',
+          createdDate: item.createdDate || '', apps: item.apps || [], categoryTags: item.categoryTags || [],
+          styleTags: item.styleTags || [], contents: (item.contents || []).map(c => ({ name: c.name, type: packContentType(c) }))
+        };
+        files.push({ name: 'manifest.json', data: new TextEncoder().encode(JSON.stringify(manifest, null, 2)) });
+        if (item.xmlSample) files.push({ name: 'layout-example.xml', data: new TextEncoder().encode(item.xmlSample) });
+
+        (item.contents || []).forEach((c, i) => {
+          const type = packContentType(c);
+          const safeName = (c.name || ('item-' + (i + 1))).replace(/[^a-z0-9 _-]/gi, '').trim() || ('item-' + (i + 1));
+          if (c.file) {
+            files.push({ name: 'contents/' + safeName + (c.fileName && c.fileName.match(/\.[a-z0-9]+$/i) ? c.fileName.match(/\.[a-z0-9]+$/i)[0] : extForType(type)), data: dataUrlToBytes(c.file) });
+          } else if (c.xml) {
+            files.push({ name: 'contents/' + safeName + '.xml', data: new TextEncoder().encode(c.xml) });
+          }
+        });
+
+        const blob = buildZipBlob(files);
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = item.title.replace(/[^a-z0-9 _-]/gi, '') + '.zip';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      // Counts every tap independently, so several people downloading the
+      // same pack at once each register their own download with no conflict.
+      PhantomStore.registerDownload(item.id);
+      const newCount = getDownloadCount(item);
+      document.getElementById('packStatsRow').querySelector('b').textContent = newCount;
+      note.textContent = 'Download started.';
+    } catch (err) {
+      note.textContent = 'Error: download failed.';
+    }
+  }
+
+  // ---- Share: native share sheet (any installed app) + direct links for the
+  // most popular platforms, plus a plain copy-link fallback. ----
+  function togglePackShareMenu() {
+    document.getElementById('packShareMenu').classList.toggle('open');
+  }
+  function closePackShareMenu() {
+    document.getElementById('packShareMenu').classList.remove('open');
+  }
+  function packShareUrl() {
+    return location.origin + location.pathname + '?pack=' + currentPack.id;
+  }
+
+  async function nativeSharePack() {
+    closePackShareMenu();
+    if (!currentPack) return;
+    const url = packShareUrl();
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: currentPack.title, text: 'Check out "' + currentPack.title + '" on Owlious', url });
+        PhantomStore.registerShare(currentPack.id);
+      } catch (_) { /* user cancelled the share sheet — not an error */ }
+    } else {
+      sharePackTo('copy');
+    }
+  }
+
+  function sharePackTo(platform) {
+    closePackShareMenu();
+    if (!currentPack) return;
+    const url = packShareUrl();
+    const text = 'Check out "' + currentPack.title + '" on Owlious';
+    const note = document.getElementById('packDownloadNote');
+
+    const links = {
+      facebook: 'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(url),
+      twitter: 'https://twitter.com/intent/tweet?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text),
+      whatsapp: 'https://wa.me/?text=' + encodeURIComponent(text + ' ' + url),
+      telegram: 'https://t.me/share/url?url=' + encodeURIComponent(url) + '&text=' + encodeURIComponent(text)
+    };
+
+    if (platform === 'copy') {
+      const showCopied = () => { note.textContent = 'Link copied!'; setTimeout(() => { if (note.textContent === 'Link copied!') note.textContent = ''; }, 2000); };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(url).then(showCopied).catch(() => window.prompt('Copy this link:', url));
+      } else {
+        window.prompt('Copy this link:', url);
+      }
+      PhantomStore.registerShare(currentPack.id);
+      return;
+    }
+
+    if (links[platform]) {
+      window.open(links[platform], '_blank', 'noopener');
+      PhantomStore.registerShare(currentPack.id);
+    }
+  }
+
+  // Summarizes every pack's metadata + contents for the AI chat, so it can
+  // answer "what's inside Vintago?" or recommend a pack without the visitor
+  // having to open it first. Kept short (title/tags/content names only, no
+  // full XML bodies) so it doesn't blow out the chat's context budget.
+  async function buildPackContextForAI() {
+    const items = await PhantomStore.getItems();
+    const packs = items.filter(i => i.category === 'packs');
+    if (!packs.length) return '';
+    const lines = packs.slice(0, 30).map(p => {
+      const bits = [];
+      bits.push(p.title);
+      if (p.categoryTags && p.categoryTags.length) bits.push('categories: ' + p.categoryTags.join(', '));
+      if (p.styleTags && p.styleTags.length) bits.push('styles: ' + p.styleTags.join(', '));
+      if (p.apps && p.apps.length) bits.push('works with: ' + p.apps.join(', '));
+      if (p.contents && p.contents.length) bits.push('contains ' + p.contents.length + ' items (' + p.contents.slice(0, 6).map(c => c.name).join(', ') + (p.contents.length > 6 ? ', …' : '') + ')');
+      bits.push(getDownloadCount(p) + ' downloads');
+      return '- ' + bits.join(' | ');
+    });
+    return 'Here are the asset packs currently available on Owlious, so you can answer questions about what\'s inside them and recommend one when it fits:\n' + lines.join('\n');
+  }
+
+  function renderViewParams(item) {
+    const container = document.getElementById('viewParams');
+    const def = EFFECT_TYPES[item.effectType];
+    if (!def || !def.params.length) { container.style.display = 'none'; container.innerHTML = ''; return; }
+    container.style.display = 'block';
+
+    if (def.kind === 'image') {
+      container.innerHTML = '<div class="params-heading">Adjust</div>' +
+        def.params.map(p => `<div class="param-block" data-key="${p.key}"></div>`).join('');
+      def.params.forEach(p => renderAnimatableParamBlock(item, p));
+    } else {
+      container.innerHTML = '<div class="params-heading">Adjust</div>' +
+        def.params.map(p => paramControlHtml('view', item.id, p, paramValues[item.id][p.key])).join('');
+    }
+  }
+
+  // --- Image params: each slider can be left static, or "Animate"d over a
+  // timeline with its own start/end value and an easing envelope you shape
+  // by dragging the handles. Color/toggle params stay static (no timeline). ---
+  function renderAnimatableParamBlock(item, p) {
+    const block = document.querySelector(`.param-block[data-key="${p.key}"]`);
+    if (!block) return;
+    const value = paramValues[item.id][p.key];
+
+    let html = paramControlHtml('view', item.id, p, value);
+    if (p.type !== 'color' && p.type !== 'toggle') {
+      // splice an Animate checkbox into the row (paramControlHtml doesn't include one)
+      html = html.replace('</div>', `<label class="anim-toggle"><input type="checkbox" onchange="toggleAnimate(${item.id}, '${p.key}', this.checked)"> Animate</label></div>`);
+    }
+    block.innerHTML = html;
+
+    if (p.type !== 'color' && p.type !== 'toggle') {
+      const cfgDiv = document.createElement('div');
+      cfgDiv.className = 'anim-config';
+      cfgDiv.id = 'animCfg_' + item.id + '_' + p.key;
+      cfgDiv.style.display = 'none';
+      cfgDiv.innerHTML = `
+        <div class="anim-row"><span>Start</span><input type="number" step="${p.step || 1}" value="${p.min}" oninput="updateAnimField(${item.id}, '${p.key}', 'start', this.value)"></div>
+        <div class="anim-row"><span>End</span><input type="number" step="${p.step || 1}" value="${p.max}" oninput="updateAnimField(${item.id}, '${p.key}', 'end', this.value)"></div>
+        <div class="anim-row"><span>Duration (s)</span><input type="number" step="0.1" min="0.2" value="2" oninput="updateAnimField(${item.id}, '${p.key}', 'duration', this.value)"></div>
+        <div class="anim-row"><span>Ease curve</span><span style="flex:1; font-size:10px; color:#666;">drag the dots</span></div>
+      `;
+      const tpl = document.getElementById('envelopeTemplate').content.cloneNode(true);
+      cfgDiv.appendChild(tpl);
+      block.appendChild(cfgDiv);
+
+      animConfig[item.id][p.key] = {
+        enabled: false, start: p.min, end: p.max, duration: 2,
+        nodes: [0, 0.25, 0.5, 0.75, 1].map(t => ({ t, v: t }))
+      };
+      initEnvelope(cfgDiv.querySelector('.envelope-box'), item.id, p.key);
+    }
+  }
+
+  function toggleAnimate(itemId, key, enabled) {
+    animConfig[itemId][key].enabled = enabled;
+    const cfg = document.getElementById('animCfg_' + itemId + '_' + key);
+    if (cfg) cfg.style.display = enabled ? 'block' : 'none';
+    const block = document.querySelector(`.param-block[data-key="${key}"]`);
+    const rangeInput = block ? block.querySelector('input[type="range"]') : null;
+    if (rangeInput) rangeInput.disabled = enabled;
+    recomputeTimeline(itemId);
+  }
+
+  function updateAnimField(itemId, key, field, value) {
+    animConfig[itemId][key][field] = Number(value);
+    recomputeTimeline(itemId);
+  }
+
+  // --- Envelope editor: 5 fixed-time handles, vertically draggable ---
+  function envelopeXY(node) {
+    return { x: node.t * 160, y: (1 - node.v) * 90 };
+  }
+
+  function redrawEnvelope(svg, nodes) {
+    const poly = svg.querySelector('.envelope-line');
+    poly.setAttribute('points', nodes.map(n => { const p = envelopeXY(n); return p.x + ',' + p.y; }).join(' '));
+    svg.querySelectorAll('.envelope-handle').forEach((h, i) => {
+      const p = envelopeXY(nodes[i]);
+      h.setAttribute('cx', p.x);
+      h.setAttribute('cy', p.y);
+    });
+  }
+
+  function initEnvelope(svg, itemId, key) {
+    const nodes = animConfig[itemId][key].nodes;
+    nodes.forEach((n, i) => {
+      const handle = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+      handle.setAttribute('class', 'envelope-handle');
+      handle.setAttribute('rx', 5);
+      handle.setAttribute('ry', 5);
+      svg.appendChild(handle);
+
+      handle.onpointerdown = (e) => {
+        handle.setPointerCapture(e.pointerId);
+        const box = svg.getBoundingClientRect();
+        const onMove = (ev) => {
+          const y = Math.min(90, Math.max(0, (ev.clientY - box.top) * (90 / box.height)));
+          nodes[i].v = 1 - (y / 90);
+          redrawEnvelope(svg, nodes);
+          if (animConfig[itemId][key].enabled) applyPlayhead();
+        };
+        const onUp = () => {
+          window.removeEventListener('pointermove', onMove);
+          window.removeEventListener('pointerup', onUp);
+        };
+        window.addEventListener('pointermove', onMove);
+        window.addEventListener('pointerup', onUp);
+      };
+    });
+    redrawEnvelope(svg, nodes);
+  }
+
+  function sampleEnvelope(nodes, t) {
+    t = Math.min(1, Math.max(0, t));
+    for (let i = 0; i < nodes.length - 1; i++) {
+      const a = nodes[i], b = nodes[i + 1];
+      if (t >= a.t && t <= b.t) {
+        const localT = (b.t - a.t) === 0 ? 0 : (t - a.t) / (b.t - a.t);
+        return a.v + (b.v - a.v) * localT;
+      }
+    }
+    return nodes[nodes.length - 1].v;
+  }
+
+  // --- Timeline: shared scrub bar drives every animated param at once ---
+  function recomputeTimeline(itemId) {
+    const cfgs = Object.values(animConfig[itemId] || {}).filter(c => c.enabled);
+    if (cfgs.length === 0) { hideTimeline(); return; }
+    maxDuration = Math.max(0.2, ...cfgs.map(c => c.duration));
+    document.getElementById('timelineSection').style.display = 'block';
+    playheadTime = Math.min(playheadTime, maxDuration);
+    document.getElementById('timelineScrub').value = playheadTime / maxDuration;
+    applyPlayhead();
+  }
+
+  function hideTimeline() {
+    document.getElementById('timelineSection').style.display = 'none';
+    document.getElementById('timelineScrub').value = 0;
+    document.getElementById('timelineTimeLabel').textContent = '0.0s';
+  }
+
+  function onScrub(normalized) {
+    stopPlayback();
+    playheadTime = Number(normalized) * maxDuration;
+    applyPlayhead();
+  }
+
+  function applyPlayhead() {
+    if (!currentItem) return;
+    const cfg = animConfig[currentItem.id] || {};
+    Object.keys(cfg).forEach(key => {
+      const c = cfg[key];
+      if (!c.enabled) return;
+      const t = c.duration > 0 ? playheadTime / c.duration : 1;
+      const progress = sampleEnvelope(c.nodes, t);
+      paramValues[currentItem.id][key] = c.start + (c.end - c.start) * progress;
+    });
+    document.getElementById('timelineTimeLabel').textContent = playheadTime.toFixed(1) + 's';
+    renderImagePreview();
+  }
+
+  function togglePlay() {
+    if (isPlaying) { stopPlayback(); return; }
+    isPlaying = true;
+    playLastTs = null;
+    document.getElementById('playBtn').innerHTML = '&#10074;&#10074; Pause';
+    playRafId = requestAnimationFrame(playTick);
+  }
+
+  function stopPlayback() {
+    isPlaying = false;
+    if (playRafId) cancelAnimationFrame(playRafId);
+    playRafId = null;
+    const btn = document.getElementById('playBtn');
+    if (btn) btn.innerHTML = '&#9654; Play';
+  }
+
+  function playTick(ts) {
+    if (!isPlaying) return;
+    if (playLastTs == null) playLastTs = ts;
+    const delta = (ts - playLastTs) / 1000;
+    playLastTs = ts;
+    playheadTime += delta;
+    if (playheadTime >= maxDuration) { playheadTime = 0; }
+    document.getElementById('timelineScrub').value = playheadTime / maxDuration;
+    applyPlayhead();
+    playRafId = requestAnimationFrame(playTick);
+  }
+
+  function onParamInput(scope, itemId, key, value) {
+    if (!currentItem || currentItem.id !== itemId) return;
+    const def = EFFECT_TYPES[currentItem.effectType];
+    const paramDef = def.params.find(p => p.key === key);
+    paramValues[itemId][key] = paramDef.type === 'toggle' ? value : (paramDef.type === 'color' ? value : Number(value));
+    if (def.kind === 'image') {
+      renderImagePreview();
+    } else {
+      scheduleAudioRender();
+    }
+  }
+
+  // --- Image path: canvas draws live, "download" just exports the canvas ---
+  function onUserFilePicked(event) {
+    const file = event.target.files[0];
+    if (!file || !currentItem) return;
+    const def = EFFECT_TYPES[currentItem.effectType];
+
+    if (def.kind === 'image') {
+      const img = new Image();
+      img.onload = () => {
+        userImageEl = img;
+        const canvas = document.getElementById('previewCanvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        canvas.style.display = 'block';
+        document.getElementById('previewAudioBox').style.display = 'none';
+        document.getElementById('downloadBtn').disabled = false;
+        renderImagePreview();
+      };
+      img.src = URL.createObjectURL(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const ctx = new (window.AudioContext || window.webkitAudioContext)();
+          userAudioBuffer = await ctx.decodeAudioData(reader.result);
+          document.getElementById('previewCanvas').style.display = 'none';
+          document.getElementById('previewAudioBox').style.display = 'block';
+          document.getElementById('downloadBtn').disabled = false;
+          scheduleAudioRender();
+        } catch (e) {
+          document.getElementById('renderingNote').textContent = 'Could not read that audio file.';
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
+  }
+
+  function renderImagePreview() {
+    if (!userImageEl || !currentItem) return;
+    const canvas = document.getElementById('previewCanvas');
+    const ctx = canvas.getContext('2d');
+    const def = EFFECT_TYPES[currentItem.effectType];
+    def.apply(ctx, canvas, userImageEl, paramValues[currentItem.id]);
+  }
+
+  function downloadResult() {
+    if (!currentItem) return;
+    const def = EFFECT_TYPES[currentItem.effectType];
+    if (def.kind === 'image') {
+      const canvas = document.getElementById('previewCanvas');
+      canvas.toBlob(blob => triggerDownload(blob, currentItem.title.replace(/\s+/g, '_') + '.png'));
+    } else if (renderedAudioBlob) {
+      triggerDownload(renderedAudioBlob, currentItem.title.replace(/\s+/g, '_') + '.wav');
+    }
+  }
+
+  function triggerDownload(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+  }
+
+  // --- Audio path: re-render offline whenever a param changes (debounced),
+  // then point the <audio> element at the rendered result ---
+  function scheduleAudioRender() {
+    clearTimeout(audioRenderTimer);
+    document.getElementById('renderingNote').textContent = 'Rendering...';
+    audioRenderTimer = setTimeout(renderAudioNow, 250);
+  }
+
+  async function renderAudioNow() {
+    if (!userAudioBuffer || !currentItem) return;
+    const def = EFFECT_TYPES[currentItem.effectType];
+    const offlineCtx = new OfflineAudioContext(
+      userAudioBuffer.numberOfChannels,
+      userAudioBuffer.length,
+      userAudioBuffer.sampleRate
+    );
+    def.apply(offlineCtx, userAudioBuffer, paramValues[currentItem.id]);
+    const rendered = await offlineCtx.startRendering();
+    renderedAudioBlob = audioBufferToWavBlob(rendered);
+    const audioEl = document.getElementById('previewAudio');
+    audioEl.src = URL.createObjectURL(renderedAudioBlob);
+    document.getElementById('renderingNote').textContent = '';
+  }
+
+  // Minimal 16-bit PCM WAV encoder so the rendered result is downloadable —
+  // OfflineAudioContext only gives us an AudioBuffer, not a file.
+  function audioBufferToWavBlob(buffer) {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const length = buffer.length * numChannels * 2 + 44;
+    const bufArr = new ArrayBuffer(length);
+    const view = new DataView(bufArr);
+
+    function writeString(offset, str) { for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i)); }
+
+    writeString(0, 'RIFF');
+    view.setUint32(4, length - 8, true);
+    writeString(8, 'WAVE');
+    writeString(12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, 1, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * numChannels * 2, true);
+    view.setUint16(32, numChannels * 2, true);
+    view.setUint16(34, 16, true);
+    writeString(36, 'data');
+    view.setUint32(40, length - 44, true);
+
+    const channels = [];
+    for (let c = 0; c < numChannels; c++) channels.push(buffer.getChannelData(c));
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let c = 0; c < numChannels; c++) {
+        const sample = Math.max(-1, Math.min(1, channels[c][i]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+        offset += 2;
+      }
+    }
+    return new Blob([bufArr], { type: 'audio/wav' });
+  }
+
+  function closeAllPanels() {
+    stopPlayback();
+    document.getElementById('overlay').classList.remove('active');
+    document.getElementById('viewPanel').classList.remove('active');
+    document.getElementById('packPanel').classList.remove('active');
+  }
+
+  showPage('all');
+  renderAll();
+  openSharedItemFromUrl();
+  renderChatFromMemory();
+  updateModelMenuActiveState();
+  document.getElementById('chatMessages').addEventListener('scroll', updateScrollDownButton);
+</script>
+
+</body>
+</html>
