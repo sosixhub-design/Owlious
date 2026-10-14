@@ -1,8 +1,0 @@
-{
-  "motion": {
-    "flow": "motion_flow.onnx",
-    "interp": "motion_interp.onnx",
-    "w": 512,
-    "h": 288
-  }
-}
